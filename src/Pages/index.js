@@ -1,3 +1,4 @@
+import AuthPage from "./AuthPage";
 import StartPage from "./StartPage";
 
-export { StartPage };
+export { StartPage, AuthPage };

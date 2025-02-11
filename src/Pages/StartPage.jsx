@@ -10,13 +10,8 @@ function StartPage() {
 
   // this function identifies which auth btn was clicked and helps us know wether to login/signup
   function handleStartBtn(btnName) {
-    if (btnName === "signup") {
-      dispatch(setIsSignup(true));
-    } else {
-      dispatch(setIsSignup(false));
-    }
-
-    navigate("/signup");
+    dispatch(setIsSignup(btnName));
+    navigate("/authPage");
   }
 
   return (

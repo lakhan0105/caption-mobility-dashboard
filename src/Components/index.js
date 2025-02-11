@@ -1,3 +1,4 @@
-import MyBtn from "./MyBtn";
+import AuthBtn from "./AuthBtn";
+import InputRow from "./InputRow";
 
-export { MyBtn };
+export { AuthBtn, InputRow };
