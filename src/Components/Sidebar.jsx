@@ -1,0 +1,23 @@
+import React from "react";
+import { NavLink } from "react-router";
+
+function Sidebar() {
+  return (
+    <aside className="w-full max-w-[300px] bg-[#F8F9FA] fixed top-0 bottom-0 left-0 z-50 pl-10">
+      <div className="h-[70px] flex items-center gap-5 justify-between pr-4 borde">
+        <h2 className="font-semibold">Dashboard</h2>
+      </div>
+
+      <ul className="flex flex-col gap-8 mt-1 pt-5 border-r h-full">
+        <li>
+          <NavLink to={"dashboard/profile"}>Profile</NavLink>
+        </li>
+        <li>
+          <NavLink to={"dashboard/users"}>Users</NavLink>
+        </li>
+      </ul>
+    </aside>
+  );
+}
+
+export default Sidebar;
