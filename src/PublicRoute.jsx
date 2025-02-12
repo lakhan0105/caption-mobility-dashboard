@@ -12,7 +12,7 @@ function PublicRoute() {
     dispatch(fetchCurrUser());
   }, []);
 
-  return currUser ? <Navigate to={"/profile"} /> : <Outlet />;
+  return currUser ? <Navigate to={"dashboard/profile"} /> : <Outlet />;
 }
 
 export default PublicRoute;

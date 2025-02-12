@@ -15,6 +15,8 @@ import {
 import { AuthPage, StartPage } from "./Pages/index.js";
 import PublicRoute from "./PublicRoute.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
+import RootLayout from "./RootLayout.jsx";
+import Profile from "./Components/Profile.jsx";
 
 // router
 const router = createBrowserRouter(
@@ -26,7 +28,9 @@ const router = createBrowserRouter(
       </Route>
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/profile" />
+        <Route element={<RootLayout />}>
+          <Route path="dashboard/profile" element={<Profile />} />
+        </Route>
       </Route>
     </>
   )
