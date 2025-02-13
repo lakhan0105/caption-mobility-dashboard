@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import customFetch from "../../customFetch";
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
+const dbId = import.meta.env.VITE_DB_ID;
+const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 
 // initialState
 const initialState = {
@@ -17,7 +19,27 @@ export const createAccount = createAsyncThunk(
     try {
       const response = await customFetch.post("/account", data);
       console.log(response);
-      return response.data;
+
+      // login the user
+      const loginResp = await thunkAPI.dispatch(
+        loginUser({ email: data.email, password: data.password })
+      );
+
+      if (!loginResp) {
+        throw new Error("Login failed after account creation");
+      }
+
+      // create a object to pass into saveUser object
+      const userDetails = {
+        userName: data.name,
+        userEmail: data.email,
+      };
+
+      // save the user details after creating their account using saveUser function
+      await thunkAPI.dispatch(
+        saveUser({ documentId: data.userId, userDetails })
+      );
+      return;
     } catch (error) {
       console.log(error);
 
@@ -28,6 +50,27 @@ export const createAccount = createAsyncThunk(
       }
 
       return thunkAPI.rejectWithValue("error in createAccount", error);
+    }
+  }
+);
+
+// store user details after account creation
+export const saveUser = createAsyncThunk(
+  "auth/saveUser",
+  async ({ documentId, userDetails }, thunkAPI) => {
+    try {
+      const response = await customFetch.post(
+        `/databases/${dbId}/collections/${usersCollId}/documents`,
+        {
+          documentId,
+          data: userDetails,
+        }
+      );
+      console.log(response.data);
+      return;
+    } catch (error) {
+      console.log(error);
+      return thunkAPI.rejectWithValue("error in saveUser", error);
     }
   }
 );
@@ -160,6 +203,18 @@ const AuthSlice = createSlice({
       .addCase(fetchCurrUser.rejected, (state, { payload }) => {
         state.isLoading = false;
         console.log("Error in fetching the curUser", payload);
+      })
+      .addCase(saveUser.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(saveUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        console.log("saved the user details in the backend");
+        console.log(state.currUser);
+      })
+      .addCase(saveUser.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        console.log("Error in savinf the user details", payload);
       });
   },
 });
