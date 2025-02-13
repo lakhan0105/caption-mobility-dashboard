@@ -1,7 +1,32 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FaUser } from "react-icons/fa6";
+import { useSelector } from "react-redux";
+import { Navigate, useParams } from "react-router";
 
 function Profile() {
+  const params = useParams();
+  const { currUser, isLoading } = useSelector((state) => state.authReducer);
+
+  const [checkAuth, setCheckAuth] = useState(false);
+  const [profile, setProfile] = useState();
+
+  useEffect(() => {
+    if (currUser.id !== params.id && currUser.isAdmin === false) {
+      setCheckAuth(false);
+    } else {
+      setCheckAuth(true);
+    }
+  }, []);
+
+  // if checkAuth is false show the unauth message on screen
+  if (checkAuth === false) {
+    return (
+      <h2 className="ml-[300px] w-[calc(100%-300px)] rounded-l h-[80v]">
+        You are Unauthorized, to see the data
+      </h2>
+    );
+  }
+
   return (
     <section className="ml-[300px] w-[calc(100%-300px)] rounded-l h-[80v]  overflow-hidden">
       {/* profile header */}

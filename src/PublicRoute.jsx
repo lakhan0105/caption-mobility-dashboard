@@ -10,9 +10,13 @@ function PublicRoute() {
   const dispatch = useDispatch();
   useEffect(() => {
     dispatch(fetchCurrUser());
-  }, []);
+  }, [dispatch]);
 
-  return currUser ? <Navigate to={"dashboard/profile"} /> : <Outlet />;
+  return currUser ? (
+    <Navigate to={`dashboard/profile/${currUser.id}`} />
+  ) : (
+    <Outlet />
+  );
 }
 
 export default PublicRoute;

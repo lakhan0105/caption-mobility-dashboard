@@ -29,7 +29,7 @@ const router = createBrowserRouter(
 
       <Route element={<ProtectedRoute />}>
         <Route element={<RootLayout />}>
-          <Route path="dashboard/profile" element={<Profile />} />
+          <Route path="dashboard/profile/:id" element={<Profile />} />
         </Route>
       </Route>
     </>
