@@ -1,5 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import customFetch from "../../customFetch";
+import { account, client, databases } from "../../appwrite";
+import { Permission, Role, Teams } from "appwrite";
+
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -17,8 +19,12 @@ export const createAccount = createAsyncThunk(
   "auth/createAccount",
   async (data, thunkAPI) => {
     try {
-      const response = await customFetch.post("/account", data);
-      console.log(response);
+      const response = await account.create(
+        data.userId,
+        data.email,
+        data.password,
+        data.name
+      );
 
       // login the user
       const loginResp = await thunkAPI.dispatch(
@@ -29,16 +35,21 @@ export const createAccount = createAsyncThunk(
         throw new Error("Login failed after account creation");
       }
 
-      // create a object to pass into saveUser object
-      const userDetails = {
-        userName: data.name,
-        userEmail: data.email,
-      };
+      if (loginResp) {
+        // save the user details after creating their account
+        const docData = {
+          userName: data.name,
+          userEmail: data.email,
+        };
 
-      // save the user details after creating their account using saveUser function
-      await thunkAPI.dispatch(
-        saveUser({ documentId: data.userId, userDetails })
-      );
+        await thunkAPI.dispatch(
+          saveUser({
+            documentId: data.userId,
+            docData,
+          })
+        );
+      }
+
       return;
     } catch (error) {
       console.log(error);
@@ -57,16 +68,31 @@ export const createAccount = createAsyncThunk(
 // store user details after account creation
 export const saveUser = createAsyncThunk(
   "auth/saveUser",
-  async ({ documentId, userDetails }, thunkAPI) => {
+  async ({ documentId, docData }, thunkAPI) => {
     try {
-      const response = await customFetch.post(
-        `/databases/${dbId}/collections/${usersCollId}/documents`,
-        {
-          documentId,
-          data: userDetails,
-        }
+      const permissions = [
+        Permission.read(Role.user(documentId)),
+        Permission.update(Role.user(documentId)),
+        Permission.delete(Role.user(documentId)),
+
+        Permission.read(Role.user(adminTeamId)),
+        Permission.update(Role.user(adminTeamId)),
+        Permission.delete(Role.user(adminTeamId)),
+      ];
+
+      console.log("printing permisisons array...");
+      console.log(permissions);
+
+      const response = await databases.createDocument(
+        dbId,
+        usersCollId,
+        documentId,
+        docData,
+        permissions
       );
-      console.log(response.data);
+
+      console.log("Response after saving the document");
+      console.log(response);
       return;
     } catch (error) {
       console.log(error);
@@ -81,15 +107,13 @@ export const loginUser = createAsyncThunk(
   async (data, thunkAPI) => {
     console.log("inside loginUser function,", data);
     try {
-      const response = await customFetch.post("/account/sessions/email", data);
+      const response = await account.createEmailPasswordSession(
+        data.email,
+        data.password
+      );
       console.log("loggining in...");
-
-      if (response.status !== 201) {
-        throw new Error("Login failed");
-      }
-
-      console.log("auth completed, getting user...");
-      await new Promise((resolve) => setTimeout(resolve, 500)); // small delay
+      console.log("login completed, getting user...");
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // small delay
       return await getCurrUser();
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -101,9 +125,8 @@ export const loginUser = createAsyncThunk(
 const getCurrUser = async () => {
   try {
     // get the account of the user
-    const account = await customFetch.get("/account");
+    const data = await account.get();
 
-    const data = account.data;
     const currUser = {
       id: data.$id,
       email: data.email,
@@ -112,12 +135,13 @@ const getCurrUser = async () => {
     };
 
     // get the list of teams the user is part of
-    const teamsResponse = await customFetch.get("/teams");
-    const teams = teamsResponse.data?.teams || [];
-    console.log("teams", teams);
+    const teams = new Teams(client);
+    const teamsResponse = await teams.list();
+    const teamList = teamsResponse?.teams || [];
+    console.log("teams", teamList);
 
     let isAdmin = false;
-    for (let team of teams) {
+    for (let team of teamList) {
       if (team.$id === adminTeamId) {
         isAdmin = true;
         break;

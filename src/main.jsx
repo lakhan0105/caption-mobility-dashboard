@@ -16,7 +16,7 @@ import { AuthPage, StartPage } from "./Pages/index.js";
 import PublicRoute from "./PublicRoute.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RootLayout from "./RootLayout.jsx";
-import Profile from "./Components/Profile.jsx";
+import Profile from "./Pages/Profile.jsx";
 
 // router
 const router = createBrowserRouter(

@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { FaUser } from "react-icons/fa6";
-import { useSelector } from "react-redux";
-import { Navigate, useParams } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router";
+import { getUserProfile } from "../features/user/UserSlice";
+import { ProfileRow } from "../Components";
 
 function Profile() {
   const params = useParams();
   const { currUser, isLoading } = useSelector((state) => state.authReducer);
+  const { userProfile, isUserLoading } = useSelector((state) => {
+    return state.userReducer;
+  });
+  const dispatch = useDispatch();
 
   const [checkAuth, setCheckAuth] = useState(false);
   const [profile, setProfile] = useState();
@@ -15,6 +20,7 @@ function Profile() {
       setCheckAuth(false);
     } else {
       setCheckAuth(true);
+      dispatch(getUserProfile(params.id));
     }
   }, []);
 
@@ -44,7 +50,9 @@ function Profile() {
 
         {/* basic-info */}
         <div className="flex items-end px-10 relative max-w-[1000px] mx-auto">
-          <h2 className="text-3xl font-bold mt-10 mb-10">Lakhan kumar</h2>
+          <h2 className="text-3xl font-bold mt-10 mb-10">
+            {userProfile?.userName}
+          </h2>
         </div>
       </div>
 
@@ -52,24 +60,9 @@ function Profile() {
       <div className="px-10 max-w-[1000px] mx-auto">
         <h2 className="text-md ">Account Information</h2>
 
-        <div className="grid grid-cols-[110px_1fr] gap-4 justify-start py-6 border-b items-center">
-          <h3 className="text-lg">User ID</h3>
-          <div>
-            <p className="text-sm">fmjeowdipsfh2893y</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-[110px_1fr] gap-4 py-6 border-b items-center">
-          <h3 className="text-lg">Email</h3>
-          <div>
-            <p className="text-sm">lakhan0105@gmail.com</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-[110px_1fr] gap-4 py-6 border-b items-center">
-          <h3 className="text-lg">Address</h3>
-          <div>
-            <p className="text-sm">mahadevapura, Bengaluru</p>
-          </div>
-        </div>
+        <ProfileRow heading={"User Id"} value={userProfile?.$id} />
+        <ProfileRow heading={"Email"} value={userProfile?.userEmail} />
+        <ProfileRow heading={"Phone"} value={userProfile?.userPhone} />
       </div>
     </section>
   );
