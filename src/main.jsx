@@ -12,11 +12,12 @@ import {
 } from "react-router";
 
 // import pages
-import { AuthPage, StartPage } from "./Pages/index.js";
+import { AuthPage, StartPage, Users } from "./Pages/index.js";
 import PublicRoute from "./PublicRoute.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RootLayout from "./RootLayout.jsx";
 import Profile from "./Pages/Profile.jsx";
+import AdminRoute from "./AdminRoute.jsx";
 
 // router
 const router = createBrowserRouter(
@@ -30,6 +31,11 @@ const router = createBrowserRouter(
       <Route element={<ProtectedRoute />}>
         <Route element={<RootLayout />}>
           <Route path="dashboard/profile/:id" element={<Profile />} />
+
+          {/* users comp wrapped in adminRoute comp */}
+          <Route element={<AdminRoute />}>
+            <Route path="dashboard/users" element={<Users />} />
+          </Route>
         </Route>
       </Route>
     </>

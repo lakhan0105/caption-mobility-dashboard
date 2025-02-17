@@ -13,7 +13,6 @@ function Profile() {
   const dispatch = useDispatch();
 
   const [checkAuth, setCheckAuth] = useState(false);
-  const [profile, setProfile] = useState();
 
   useEffect(() => {
     if (currUser.id !== params.id && currUser.isAdmin === false) {
@@ -22,7 +21,7 @@ function Profile() {
       setCheckAuth(true);
       dispatch(getUserProfile(params.id));
     }
-  }, []);
+  }, [params.id]);
 
   // if checkAuth is false show the unauth message on screen
   if (checkAuth === false) {
