@@ -80,9 +80,6 @@ export const saveUser = createAsyncThunk(
         Permission.delete(Role.user(adminTeamId)),
       ];
 
-      console.log("printing permisisons array...");
-      console.log(permissions);
-
       const response = await databases.createDocument(
         dbId,
         usersCollId,

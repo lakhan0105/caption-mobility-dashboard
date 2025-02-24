@@ -7,8 +7,9 @@ import ProfileRow from "./ProfileRow";
 import TableHeader from "./TableHeader";
 import TableRow from "./TableRow";
 import UserCard from "./UserCard";
+import UserForm from "./UserForm";
 import UsersTable from "./UsersTable";
-import ViewBtn from "./viewBtn";
+import ViewBtn from "./ViewBtn";
 
 export {
   AuthBtn,
@@ -22,4 +23,5 @@ export {
   UserCard,
   ViewBtn,
   Modal,
+  UserForm,
 };
