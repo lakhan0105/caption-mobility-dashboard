@@ -12,7 +12,13 @@ import {
 } from "react-router";
 
 // import pages
-import { AuthPage, StartPage, Users } from "./Pages/index.js";
+import {
+  AuthPage,
+  Bikes,
+  StartPage,
+  UserDetails,
+  Users,
+} from "./Pages/index.js";
 import PublicRoute from "./PublicRoute.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RootLayout from "./RootLayout.jsx";
@@ -35,6 +41,8 @@ const router = createBrowserRouter(
           {/* users comp wrapped in adminRoute comp */}
           <Route element={<AdminRoute />}>
             <Route path="dashboard/users" element={<Users />} />
+            <Route path="dashboard/users/:id" element={<UserDetails />} />
+            <Route path="dashboard/bikes" element={<Bikes />} />
           </Route>
         </Route>
       </Route>

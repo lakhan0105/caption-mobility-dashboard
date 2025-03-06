@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { closeModal } from "../features/modal/modalSlice";
 import { createUser, getUsersList } from "../features/user/UserSlice";
 import { ID } from "appwrite";
+import SubmitBtn from "./Buttons/SubmitBtn";
 
 function UserForm() {
   const [userInputState, setUserInputState] = useState({
@@ -85,12 +86,7 @@ function UserForm() {
         value={userInputState.userCompany}
       />
 
-      <button
-        type="submit"
-        className="w-full bg-blue-500 text-white text-sm py-2 rounded"
-      >
-        Create a new user
-      </button>
+      <SubmitBtn text={"create a new user"} />
     </form>
   );
 }
