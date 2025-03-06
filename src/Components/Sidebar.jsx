@@ -7,7 +7,7 @@ function Sidebar() {
 
   return (
     <aside className="w-0 hidden md:block md:w-[300px] bg-gray-200 fixed top-0 bottom-0 left-0 z-50 pl-10 border-r">
-      <div className="h-[100px] flex items-center gap-5 justify-between pr-4 borde">
+      <div className="h-[100px] flex items-center gap-5 justify-between pr-4">
         <h2 className="font-semibold text-xl">Dashboard</h2>
       </div>
 
@@ -17,6 +17,9 @@ function Sidebar() {
         </li>
         <li>
           <NavLink to={"dashboard/users"}>Users</NavLink>
+        </li>
+        <li>
+          <NavLink to={"dashboard/bikes"}>Bikes</NavLink>
         </li>
       </ul>
     </aside>

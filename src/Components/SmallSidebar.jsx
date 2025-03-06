@@ -35,6 +35,11 @@ function SmallSidebar({ handleToggleSmallSidebar, smallSidebarState }) {
             Users
           </NavLink>
         </li>
+        <li>
+          <NavLink to={"dashboard/bikes"} onClick={handleToggleSmallSidebar}>
+            Bikes
+          </NavLink>
+        </li>
       </ul>
     </aside>
   );
