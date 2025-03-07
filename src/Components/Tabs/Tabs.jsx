@@ -10,12 +10,14 @@ import UserFullDetails from "./UserFullDetails";
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
+const batteriesCollId = import.meta.env.VITE_BATTERIES_COLL_ID;
 
 function Tabs({ userDetails, handleReturnBike }) {
   const {
     $id: userId,
     bikeId: userBikeId,
     batteryId: userBatteryId,
+    userStatus,
   } = userDetails;
 
   // tab Headings Data
@@ -36,12 +38,15 @@ function Tabs({ userDetails, handleReturnBike }) {
 
   // states to store bike details
   const [userBikeDetailsState, setUserBikeDetailsState] = useState();
+  const [userBatteryDetailsState, setUserBatteryDetailsState] = useState();
   const [userFullDetailsState, setUserFullDetailsState] = useState(userDetails);
+  const [isLoading, setIsLoading] = useState(null);
 
-  // function to get the bike details of the current user
+  // function to get the bike details of a user
   async function getBikeById(userBikeId) {
     console.log("running the getBikeById function");
     try {
+      setIsLoading(true);
       const response = await databases.getDocument(
         dbId, // databaseId
         bikesCollId, // collectionId
@@ -50,9 +55,34 @@ function Tabs({ userDetails, handleReturnBike }) {
 
       if (response) {
         setUserBikeDetailsState(response);
+        setIsLoading(false);
       }
     } catch (error) {
+      setIsLoading(false);
       alert("error while getting the user bike details");
+      console.log(error);
+    }
+  }
+
+  // function to get the battery details of a user
+  async function getBatteryById(userBatteryId) {
+    console.log("fetching user battery details...");
+    setIsLoading(true);
+    try {
+      const resp = await databases.getDocument(
+        dbId,
+        batteriesCollId,
+        userBatteryId // document id
+      );
+
+      if (resp) {
+        console.log(resp);
+        setUserBatteryDetailsState(resp);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      setIsLoading(false);
+      alert("error while getting the user battery details");
       console.log(error);
     }
   }
@@ -61,8 +91,10 @@ function Tabs({ userDetails, handleReturnBike }) {
   useEffect(() => {
     if (activeTab === "user-bike" && userBikeId) {
       getBikeById(userBikeId);
+    } else if (activeTab === "user-battery" && userBatteryId) {
+      getBatteryById(userBatteryId);
     }
-  }, [userBikeId]);
+  }, [activeTab, userBikeId, userBatteryId, userStatus]);
 
   return (
     <section className="mt-8">
@@ -92,6 +124,7 @@ function Tabs({ userDetails, handleReturnBike }) {
       {/* USER BIKE DETAILS */}
       {activeTab === "user-bike" && (
         <UserBikeDetails
+          isLoading={isLoading}
           userBikeId={userBikeId}
           userBikeDetailsState={userBikeDetailsState}
           handleReturnBike={handleReturnBike}
@@ -99,7 +132,14 @@ function Tabs({ userDetails, handleReturnBike }) {
       )}
 
       {/* USER BATTERY DETAILS */}
-      {/* <UserBatteryDetails userBatteryId={userBatteryId} /> */}
+      {activeTab === "user-battery" && (
+        <UserBatteryDetails
+          isLoading={isLoading}
+          userBatteryId={userBatteryId}
+          userBatteryDetailsState={userBatteryDetailsState}
+          handleReturnBike={handleReturnBike}
+        />
+      )}
 
       {/* USER FULL DETAILS */}
       {activeTab === "user-full-details" && (

@@ -1,24 +1,57 @@
 import React, { useState } from "react";
-import { databases } from "../../appwrite";
+import moment from "moment";
+import SimpleBtn from "../Buttons/SimpleBtn";
+import { FaPlus } from "react-icons/fa6";
+import { showModal } from "../../features/modal/modalSlice";
+import { useDispatch } from "react-redux";
 
-const dbId = import.meta.env.VITE_DB_ID;
-const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
-const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
+function UserBatteryDetails({
+  isLoading,
+  userBatteryDetailsState,
+  handleReturnBike,
+  userBatteryId,
+}) {
+  const dispatch = useDispatch();
 
-function UserBatteryDetails({ userBatteryId }) {
-  // state to save the user battery details
-  const [userBatteryState, setUserBatteryState] = useState();
+  if (!userBatteryId) {
+    return (
+      <SimpleBtn
+        name={"Assign"}
+        icon={<FaPlus />}
+        extraStyles={"py-1.5 text-xs"}
+        handleBtn={() => {
+          dispatch(showModal());
+        }}
+      />
+    );
+  }
 
-  // function to fetch the user battery state
-  //   async function getBatteryById() {
-  //     try {
-  //         const response = await databases.getDocument(dbId, )
-  //     } catch (error) {
+  if (isLoading) {
+    return <h2>Loading...</h2>;
+  }
 
-  //     }
-  //   }
+  return (
+    <div className="text-sm p-2">
+      <div className="mb-5 flex justify-between items-start">
+        <div>
+          <h3 className="capitalize">battery Register Number</h3>
+          <p className="text-[0.7rem] text-zinc-500">
+            {userBatteryDetailsState?.batRegNum}
+          </p>
+        </div>
 
-  return <div>UserBatteryDetails</div>;
+        {/* SWAP BATTERY BUTTON */}
+        <button>swap</button>
+      </div>
+
+      <div>
+        <h3 className="capitalize">Assigned at</h3>
+        <p className="text-[0.7rem] text-zinc-500">
+          {moment(userBatteryDetailsState?.assignedAt).format("lll")}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default UserBatteryDetails;

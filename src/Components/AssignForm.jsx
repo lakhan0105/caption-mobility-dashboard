@@ -5,6 +5,7 @@ import { getAvailableBikes } from "../features/bike/bikeSlice";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import { useParams } from "react-router";
 import { assignBikeToUser } from "../features/user/UserSlice";
+import { getAvailableBatteries } from "../features/battery/batterySlice";
 
 function AssignForm({ getUser }) {
   const dispatch = useDispatch();
@@ -13,16 +14,23 @@ function AssignForm({ getUser }) {
 
   useEffect(() => {
     dispatch(getAvailableBikes());
+    dispatch(getAvailableBatteries());
   }, []);
 
+  // get the list of available bikes
   const { availableBikes, isBikeLoading } = useSelector(
     (state) => state.bikeReducer
+  );
+
+  // get the list of available batteries
+  const { availableBatteries, isBatteryLoading } = useSelector(
+    (state) => state.batteryReducer
   );
 
   const [assignmentData, setAssignmentData] = useState({
     userId: userId,
     selectedBikeId: null,
-    userStatus: true,
+    selectedBatteryId: null,
   });
 
   // handleChange (runs when the select bike form is modified)
@@ -40,8 +48,8 @@ function AssignForm({ getUser }) {
     e.preventDefault();
 
     // check if the bike is selected by the user
-    if (!assignmentData.selectedBikeId) {
-      alert("please select a bike");
+    if (!assignmentData.selectedBikeId || !assignmentData.selectedBatteryId) {
+      alert("please select bike & battery");
       return;
     }
 
@@ -49,7 +57,11 @@ function AssignForm({ getUser }) {
     // - change the userStatus to true
     // - change the status of that bike to true
     // - show a popup and the assignbike button should dissappear from the user profile and add a return bike button
-    dispatch(assignBikeToUser({ ...assignmentData, bikeStatus: true }))
+    dispatch(
+      assignBikeToUser({
+        ...assignmentData,
+      })
+    )
       .unwrap()
       .then(() => {
         dispatch(closeModal());
@@ -75,6 +87,7 @@ function AssignForm({ getUser }) {
         close
       </button>
 
+      {/* SELECT INPUT FOR BIKE  */}
       <label htmlFor="bike">Select Bike</label>
       <select
         name="selectedBikeId"
@@ -92,6 +105,29 @@ function AssignForm({ getUser }) {
           return (
             <option value={$id} key={$id}>
               {$id}
+            </option>
+          );
+        })}
+      </select>
+
+      {/* SELECT INPUT FOR BATTERY  */}
+      <label htmlFor="bike">Select Battery</label>
+      <select
+        name="selectedBatteryId"
+        id="battery"
+        className="border rounded text-sm"
+        onChange={handleChange}
+        value={assignmentData.selectedBatteryId || ""}
+      >
+        <option value="" disabled>
+          batteries
+        </option>
+
+        {availableBatteries?.map((battery) => {
+          const { $id, batRegNum } = battery;
+          return (
+            <option value={$id} key={$id}>
+              {batRegNum}
             </option>
           );
         })}

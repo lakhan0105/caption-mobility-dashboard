@@ -49,7 +49,7 @@ function UserForm() {
 
   return (
     <form
-      className="bg-white max-w-[400px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative"
+      className="bg-white w-full max-w-[350px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative"
       onSubmit={handleAddUser}
     >
       <button

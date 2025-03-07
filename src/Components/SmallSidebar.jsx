@@ -40,6 +40,15 @@ function SmallSidebar({ handleToggleSmallSidebar, smallSidebarState }) {
             Bikes
           </NavLink>
         </li>
+
+        <li>
+          <NavLink
+            to={"dashboard/batteries"}
+            onClick={handleToggleSmallSidebar}
+          >
+            Batteries
+          </NavLink>
+        </li>
       </ul>
     </aside>
   );

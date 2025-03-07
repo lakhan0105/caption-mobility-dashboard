@@ -4,6 +4,7 @@ import userReducer from "./features/user/UserSlice";
 import modalReducer from "./features/modal/modalSlice";
 import deviceReducer from "./features/device/deviceSlice";
 import bikeReducer from "./features/bike/bikeSlice";
+import batteryReducer from "./features/battery/batterySlice";
 
 const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ const store = configureStore({
     modalReducer,
     deviceReducer,
     bikeReducer,
+    batteryReducer,
   },
 });
 
