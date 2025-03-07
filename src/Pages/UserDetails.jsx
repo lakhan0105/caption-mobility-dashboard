@@ -3,16 +3,12 @@ import { useParams } from "react-router";
 import { FaUserCircle } from "react-icons/fa";
 import { FaPhoneAlt } from "react-icons/fa";
 import { FaRegMessage } from "react-icons/fa6";
-import { FaPlus } from "react-icons/fa6";
 import { databases } from "../appwrite";
 import SimpleBtn from "../Components/Buttons/SimpleBtn";
 import { AssignForm, Modal } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
-import { showModal } from "../features/modal/modalSlice";
-import { IoIosReturnLeft } from "react-icons/io";
-import moment from "moment";
-import { updateBike } from "../features/bike/bikeSlice";
 import { returnBikeFrmUser } from "../features/user/UserSlice";
+import Tabs from "../Components/Tabs/Tabs";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -24,6 +20,7 @@ function UserDetails() {
 
   const dispatch = useDispatch();
 
+  // function to fetch the user (single user)
   async function getUser() {
     try {
       const response = await databases.getDocument(dbId, usersCollId, paramId);
@@ -44,12 +41,15 @@ function UserDetails() {
   // function to return the bike
   // - removes the bikeId, userSatatus from the userData in appwrite
   // - changes bikeStatus to null from bikeData in appwrite
-  function handleReturnBike(data) {
-    console.log(data);
-
+  function handleReturnBike() {
     // run the returnBikeFrmUser
     // - if successfull run the getUser() to refresh the data again
-    dispatch(returnBikeFrmUser(data))
+    dispatch(
+      returnBikeFrmUser({
+        userId: userDetails?.$id,
+        bikeId: userDetails?.bikeId,
+      })
+    )
       .unwrap()
       .then(() => {
         getUser();
@@ -61,18 +61,7 @@ function UserDetails() {
   }
 
   if (userDetails) {
-    const {
-      $id,
-      userName,
-      $createdAt,
-      $updatedAt,
-      bikeId,
-      batteryId,
-      userCompany,
-      userPhone,
-      userStatus,
-      userNotes,
-    } = userDetails;
+    const { $id, userName } = userDetails;
 
     return (
       <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-5 pt-8">
@@ -101,48 +90,8 @@ function UserDetails() {
             </div>
           </div>
 
-          {/* HORIZONTAL LINE */}
-          <hr className="mt-5" />
-
-          {/* RENTAL DETAILS */}
-          <div className="mt-5">
-            <h3 className="text-sm mb-2">Rental details</h3>
-
-            <p className="text-xs">
-              status - {userStatus ? "active" : "inactive"}
-            </p>
-
-            {bikeId && (
-              <div className="mb-2 text-xs leading-relaxed">
-                <p>bike - {bikeId}</p>
-                <p>updated at - {moment({ $updatedAt }).format("lll")}</p>
-              </div>
-            )}
-
-            {/* if no bike is assigned, show the assign bike button */}
-            {bikeId ? (
-              <SimpleBtn
-                name={"return bike"}
-                icon={<IoIosReturnLeft />}
-                extraStyles={"py-1.5 text-xs bg-red-600 text-white border-none"}
-                handleBtn={() => {
-                  handleReturnBike({
-                    userId: $id,
-                    bikeId,
-                  });
-                }}
-              />
-            ) : (
-              <SimpleBtn
-                name={"Assign bike"}
-                icon={<FaPlus />}
-                extraStyles={"py-1.5 text-xs"}
-                handleBtn={() => {
-                  dispatch(showModal());
-                }}
-              />
-            )}
-          </div>
+          {/* TABS */}
+          <Tabs userDetails={userDetails} handleReturnBike={handleReturnBike} />
 
           <Modal>
             <AssignForm getUser={getUser} />
