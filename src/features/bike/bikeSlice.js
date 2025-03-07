@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite";
-import { Query } from "appwrite";
+import { ID, Query } from "appwrite";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
@@ -69,6 +69,26 @@ export const updateBike = createAsyncThunk(
   }
 );
 
+// add new bike
+export const addBike = createAsyncThunk(
+  "bike/addBike",
+  async (data, thunkAPI) => {
+    console.log(data);
+    try {
+      const resp = await databases.createDocument(
+        dbId,
+        bikesCollId,
+        ID.unique(),
+        data
+      );
+
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
 const bikeSlice = createSlice({
   name: "bikeReducer",
   initialState,
@@ -109,6 +129,17 @@ const bikeSlice = createSlice({
       .addCase(updateBike.rejected, (state, { payload }) => {
         state.isBikeLoading = false;
         alert("error in updateBike");
+        console.log(payload);
+      })
+      .addCase(addBike.pending, (state, action) => {
+        state.isBikeLoading = true;
+      })
+      .addCase(addBike.fulfilled, (state, { payload }) => {
+        state.isBikeLoading = false;
+      })
+      .addCase(addBike.rejected, (state, { payload }) => {
+        state.isBikeLoading = false;
+        alert("error in addNewBike");
         console.log(payload);
       });
   },

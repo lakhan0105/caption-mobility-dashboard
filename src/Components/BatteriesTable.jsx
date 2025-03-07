@@ -1,48 +1,46 @@
-import React from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect } from "react";
 import GenericTable from "./GenericTable";
 import TableHeader from "./TableHeader";
+import { useSelector } from "react-redux";
 import TableRow from "./TableRow";
 
-function BikesTable({ data }) {
+function BatteriesTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
 
-  // data to pass in tableHeader and body
-  const bikesTableHeadings = isMobile
-    ? ["#", "bike number", "status"]
-    : ["#", "bike number", "status", "curr owner", "assigned at"];
+  const batteryTableHeadings = isMobile
+    ? ["#", "batteryNum", "status"]
+    : ["#", "batteryNum", "status"];
 
-  const bikesTableCols = isMobile
-    ? "0.1fr 0.6fr 0.5fr"
-    : "0.1fr 0.6fr 0.5fr 0.5fr 0.5fr";
+  const batteryCols = isMobile ? "0.1fr 0.6fr 0.5fr" : "0.1fr 1fr 0.5fr ";
 
   return (
     <GenericTable>
-      <TableHeader data={bikesTableHeadings} cols={bikesTableCols} />
+      <TableHeader data={batteryTableHeadings} cols={batteryCols} />
 
+      {/* TABLE DATA */}
       <div>
-        {data.map((item, index) => {
+        {data?.map((item, index) => {
           const {
             $id,
-            bikeRegNum,
-            bikeStatus,
+            batRegNum,
+            batStatus,
             currOwner,
             assignedAt,
-            history,
             returnedAt,
           } = item;
 
           return (
-            <TableRow cols={bikesTableCols}>
+            <TableRow cols={batteryCols} key={$id}>
               {/* SL NUMBER */}
               <p className="text-[0.7rem] w-[20px] h-[20px] font-medium border bg-indigo-950 text-white flex items-center justify-center rounded-2xl mt-0.5">
                 {index + 1}
               </p>
 
-              <p>{bikeRegNum}</p>
+              <h2 className="font-medium text-md capitalize">{batRegNum}</h2>
 
+              {/* BATTERY STATUS */}
               <div className="flex gap-4 justify-center text-xs">
-                {bikeStatus ? (
+                {batStatus ? (
                   <p className="bg-blue-200 px-4 py-1.5 rounded-2xl">Active</p>
                 ) : (
                   <p className="bg-red-400/80 px-3 py-1.5 rounded-2xl">
@@ -50,9 +48,6 @@ function BikesTable({ data }) {
                   </p>
                 )}
               </div>
-
-              {!isMobile && <p>{currOwner ? currOwner : "-"}</p>}
-              {!isMobile && <p>{assignedAt ? assignedAt : "-"}</p>}
             </TableRow>
           );
         })}
@@ -61,4 +56,4 @@ function BikesTable({ data }) {
   );
 }
 
-export default BikesTable;
+export default BatteriesTable;

@@ -48,6 +48,7 @@ function UserDetails() {
       returnBikeFrmUser({
         userId: userDetails?.$id,
         bikeId: userDetails?.bikeId,
+        batteryId: userDetails?.batteryId,
       })
     )
       .unwrap()
@@ -59,6 +60,8 @@ function UserDetails() {
       });
     getUser();
   }
+
+  console.log(userDetails);
 
   if (userDetails) {
     const { $id, userName } = userDetails;

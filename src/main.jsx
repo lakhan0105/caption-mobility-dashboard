@@ -14,6 +14,7 @@ import {
 // import pages
 import {
   AuthPage,
+  Batteries,
   Bikes,
   StartPage,
   UserDetails,
@@ -43,6 +44,7 @@ const router = createBrowserRouter(
             <Route path="dashboard/users" element={<Users />} />
             <Route path="dashboard/users/:id" element={<UserDetails />} />
             <Route path="dashboard/bikes" element={<Bikes />} />
+            <Route path="dashboard/batteries" element={<Batteries />} />
           </Route>
         </Route>
       </Route>

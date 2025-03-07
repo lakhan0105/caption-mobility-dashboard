@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite.js";
 import { Permission, Role } from "appwrite";
 import { updateBike } from "../bike/bikeSlice.js";
+import { updateBattery } from "../battery/batterySlice.js";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -80,17 +81,16 @@ export const getUsersList = createAsyncThunk(
 // assign bike to user (accepts id, userStatus and bikeId)
 export const assignBikeToUser = createAsyncThunk(
   "user/assignBikeToUser",
-  async (data, thunkAPI) => {
-    console.log("data in assignBikeToUser");
-    console.log(data);
+  async ({ selectedBikeId, selectedBatteryId, userId }, thunkAPI) => {
     try {
       const response = await databases.updateDocument(
         dbId,
         usersCollId,
-        data.userId,
+        userId,
         {
-          userStatus: data.userStatus,
-          bikeId: data.selectedBikeId,
+          userStatus: true,
+          bikeId: selectedBikeId,
+          batteryId: selectedBatteryId,
         }
       );
 
@@ -100,12 +100,22 @@ export const assignBikeToUser = createAsyncThunk(
         await thunkAPI
           .dispatch(
             updateBike({
-              bikeId: data.selectedBikeId,
-              userId: data.userId,
-              bikeStatus: data.bikeStatus,
+              bikeId: selectedBikeId,
+              userId: userId,
+              bikeStatus: true,
             })
           )
-          .unwrap();
+          .unwrap()
+          .then(async () => {
+            await thunkAPI.dispatch(
+              updateBattery({
+                batteryId: selectedBatteryId,
+                userId,
+                batStatus: true,
+                assignedAt: new Date(),
+              })
+            );
+          });
 
         // get the updated usersList, (only after updateBike)
         thunkAPI.dispatch(getUsersList());
@@ -118,10 +128,23 @@ export const assignBikeToUser = createAsyncThunk(
   }
 );
 
+// assign the battery to the user
+// export const assignBatteryToUser = createAsyncThunk(
+//   "user/assignBatteryToUser",
+//   async ({ selectedBatteryId, userId }, thunkAPI) => {
+//     // update the userStatus
+//     try {
+//       const response = await databases.updateDocument()
+//     } catch (error) {
+
+//     }
+//   }
+// );
+
 // return bike from user
 export const returnBikeFrmUser = createAsyncThunk(
   "user/returnBikeFrmUser",
-  async ({ userId, bikeId }, thunkAPI) => {
+  async ({ userId, bikeId, batteryId }, thunkAPI) => {
     try {
       const response = await databases.updateDocument(
         dbId,
@@ -130,6 +153,7 @@ export const returnBikeFrmUser = createAsyncThunk(
         {
           userStatus: false,
           bikeId: null,
+          batteryId: null,
         }
       );
 
@@ -139,11 +163,22 @@ export const returnBikeFrmUser = createAsyncThunk(
           .dispatch(
             updateBike({
               bikeId,
-              userId,
+              userId: null,
               bikeStatus: false,
             })
           )
-          .unwrap();
+          .unwrap()
+          .then(async () => {
+            thunkAPI.dispatch(
+              updateBattery({
+                batteryId,
+                userId: null,
+                batStatus: false,
+                assignedAt: null,
+                returnedAt: new Date(),
+              })
+            );
+          });
       }
 
       thunkAPI.dispatch(getUsersList());
@@ -232,10 +267,7 @@ const userSlice = createSlice({
       .addCase(returnBikeFrmUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
         console.log("error in user/returnBikeFrmUser");
-        alert(payload.response.message);
         console.log(payload);
-        state.errMsg =
-          payload.response.message || "could not return bike from user";
       });
   },
 });

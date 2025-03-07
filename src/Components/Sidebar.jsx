@@ -21,6 +21,9 @@ function Sidebar() {
         <li>
           <NavLink to={"dashboard/bikes"}>Bikes</NavLink>
         </li>
+        <li>
+          <NavLink to={"dashboard/batteries"}>Batteries</NavLink>
+        </li>
       </ul>
     </aside>
   );

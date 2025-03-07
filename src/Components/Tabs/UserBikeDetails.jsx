@@ -7,6 +7,7 @@ import { useDispatch } from "react-redux";
 import { showModal } from "../../features/modal/modalSlice";
 
 function UserBikeDetails({
+  isLoading,
   userBikeId,
   userBikeDetailsState,
   handleReturnBike,
@@ -26,13 +27,17 @@ function UserBikeDetails({
     );
   }
 
+  if (isLoading) {
+    return <h2 className="p-2">Loading...</h2>;
+  }
+
   return (
     <div className="text-sm p-2">
       <div className="mb-5 flex justify-between items-start">
         <div>
-          <h3 className="capitalize">current bike id</h3>
+          <h3 className="capitalize">bike Register Number</h3>
           <p className="text-[0.7rem] text-zinc-500">
-            {userBikeDetailsState?.$id}
+            {userBikeDetailsState?.bikeRegNum}
           </p>
         </div>
 
