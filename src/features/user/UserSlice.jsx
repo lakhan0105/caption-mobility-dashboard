@@ -3,6 +3,7 @@ import { databases } from "../../appwrite.js";
 import { Permission, Role } from "appwrite";
 import { updateBike } from "../bike/bikeSlice.js";
 import { updateBattery } from "../battery/batterySlice.js";
+import toast from "react-hot-toast";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -128,18 +129,38 @@ export const assignBikeToUser = createAsyncThunk(
   }
 );
 
-// assign the battery to the user
-// export const assignBatteryToUser = createAsyncThunk(
-//   "user/assignBatteryToUser",
-//   async ({ selectedBatteryId, userId }, thunkAPI) => {
-//     // update the userStatus
-//     try {
-//       const response = await databases.updateDocument()
-//     } catch (error) {
+// updateUserBattery
+// - this will update the battery of the user on swap
+export const updateUserBattery = createAsyncThunk(
+  "user/updateUserBattery",
+  async (data, thunkAPI) => {
+    const { userId, oldBatteryId, newBatteryId } = data;
 
-//     }
-//   }
-// );
+    try {
+      const response = await databases.updateDocument(
+        dbId, // database id
+        usersCollId, // collection id
+        userId, // doc id
+        {
+          oldBatteryId,
+          batteryId: newBatteryId,
+        }
+      );
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+// swap the battery for a user
+// users collection
+// - update the previousBatteryId
+// - update the batteryId
+// - increment swap count
+
+// battery collection
+// - set previous battery's currOwner to null
+// - update currOwner
 
 // return bike from user
 export const returnBikeFrmUser = createAsyncThunk(
@@ -214,7 +235,6 @@ const userSlice = createSlice({
       })
       .addCase(getUsersList.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        console.log("fetched the users List successfully...");
         console.log(action.payload);
         const { total, documents } = action.payload;
         state.usersList = documents;
@@ -245,7 +265,7 @@ const userSlice = createSlice({
       })
       .addCase(assignBikeToUser.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        alert("Assigned bike successfully...");
+        toast.success("Assigned bike successfully...");
         console.log(action.payload);
       })
       .addCase(assignBikeToUser.rejected, (state, { payload }) => {
@@ -261,12 +281,26 @@ const userSlice = createSlice({
       })
       .addCase(returnBikeFrmUser.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        alert("returned bike from the user successfully...");
+        toast.success("returned bike from the user successfully...");
         console.log(action.payload);
       })
       .addCase(returnBikeFrmUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/returnBikeFrmUser");
+        toast.error("error in user/returnBikeFrmUser");
+        console.log(payload);
+      })
+      .addCase(updateUserBattery.pending, (state) => {
+        state.isUserLoading = true;
+        state.errMsg = null;
+      })
+      .addCase(updateUserBattery.fulfilled, (state, action) => {
+        state.isUserLoading = false;
+        console.log("updated battery details of the user successfully...");
+        console.log(action.payload);
+      })
+      .addCase(updateUserBattery.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/updateUserBattery");
         console.log(payload);
       });
   },

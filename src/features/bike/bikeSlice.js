@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite";
 import { ID, Query } from "appwrite";
+import toast from "react-hot-toast";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
@@ -124,11 +125,11 @@ const bikeSlice = createSlice({
       })
       .addCase(updateBike.fulfilled, (state, { payload }) => {
         state.isBikeLoading = false;
-        alert("updated the bike details");
+        console.log("updated the bike details...");
       })
       .addCase(updateBike.rejected, (state, { payload }) => {
         state.isBikeLoading = false;
-        alert("error in updateBike");
+        toast.error("error in updateBike");
         console.log(payload);
       })
       .addCase(addBike.pending, (state, action) => {

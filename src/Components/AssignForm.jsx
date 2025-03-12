@@ -101,10 +101,10 @@ function AssignForm({ getUser }) {
         </option>
 
         {availableBikes?.map((bike) => {
-          const { $id } = bike;
+          const { $id, bikeRegNum } = bike;
           return (
             <option value={$id} key={$id}>
-              {$id}
+              {bikeRegNum}
             </option>
           );
         })}

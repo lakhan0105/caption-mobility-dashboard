@@ -5,7 +5,7 @@ import { FaPhoneAlt } from "react-icons/fa";
 import { FaRegMessage } from "react-icons/fa6";
 import { databases } from "../appwrite";
 import SimpleBtn from "../Components/Buttons/SimpleBtn";
-import { AssignForm, Modal } from "../Components";
+import { AssignForm, Modal, SwapForm } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
 import { returnBikeFrmUser } from "../features/user/UserSlice";
 import Tabs from "../Components/Tabs/Tabs";
@@ -36,7 +36,7 @@ function UserDetails() {
 
   useEffect(() => {
     getUser();
-  }, []);
+  }, [paramId]);
 
   // function to return the bike
   // - removes the bikeId, userSatatus from the userData in appwrite
@@ -96,8 +96,13 @@ function UserDetails() {
           {/* TABS */}
           <Tabs userDetails={userDetails} handleReturnBike={handleReturnBike} />
 
+          {/* If bike is not assigned then show AssignForm or else show the swap form */}
           <Modal>
-            <AssignForm getUser={getUser} />
+            {!userDetails?.bikeId ? (
+              <AssignForm getUser={getUser} />
+            ) : (
+              <SwapForm userDetails={userDetails} getUser={getUser} />
+            )}
           </Modal>
         </div>
       </section>

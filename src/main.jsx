@@ -25,6 +25,7 @@ import ProtectedRoute from "./ProtectedRoute.jsx";
 import RootLayout from "./RootLayout.jsx";
 import Profile from "./Pages/Profile.jsx";
 import AdminRoute from "./AdminRoute.jsx";
+import { Toaster } from "react-hot-toast";
 
 // router
 const router = createBrowserRouter(
@@ -55,6 +56,7 @@ const router = createBrowserRouter(
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Provider store={store}>
+      <Toaster />
       <RouterProvider router={router}></RouterProvider>
     </Provider>
   </StrictMode>

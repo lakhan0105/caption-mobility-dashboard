@@ -6,6 +6,7 @@ import { closeModal } from "../features/modal/modalSlice";
 import { createUser, getUsersList } from "../features/user/UserSlice";
 import { ID } from "appwrite";
 import SubmitBtn from "./Buttons/SubmitBtn";
+import toast from "react-hot-toast";
 
 function UserForm() {
   const [userInputState, setUserInputState] = useState({
@@ -39,7 +40,7 @@ function UserForm() {
       .then(() => {
         setUserInputState({ userName: "", userPhone: "", userCompany: "" });
         dispatch(closeModal());
-        alert("user created successfully");
+        toast.success("user created successfully");
         dispatch(getUsersList());
       })
       .catch((error) => {

@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite";
 import { ID, Query } from "appwrite";
+import { updateUserBattery } from "../user/UserSlice";
+import toast from "react-hot-toast";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const batteriesCollId = import.meta.env.VITE_BATTERIES_COLL_ID;
@@ -70,6 +72,8 @@ export const getAvailableBatteries = createAsyncThunk(
 export const updateBattery = createAsyncThunk(
   "feat/updateBattery",
   async (data, thunkAPI) => {
+    console.log("data from updateBattery");
+    console.log(data);
     try {
       const resp = await databases.updateDocument(
         dbId, // database id
@@ -87,6 +91,55 @@ export const updateBattery = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
+  }
+);
+
+export const swapBattery = createAsyncThunk(
+  "user/swapBatteryToUser",
+  async (data, thunkAPI) => {
+    const { oldBatteryId, newBatteryId, userId } = data;
+
+    // battery collection
+    // return the old battery document
+    // - change battery status to available
+    // - remove the currOwner from old battery
+    // - update the returnedAt attribute
+    await thunkAPI
+      .dispatch(
+        updateBattery({
+          batteryId: oldBatteryId,
+          batStatus: false,
+          userId: null,
+          returnedAt: new Date(),
+        })
+      )
+      .unwrap();
+
+    // assign new battery
+    // - change battery status to not available
+    // - add the currOwner
+    // - update the assignedAt
+    await thunkAPI
+      .dispatch(
+        updateBattery({
+          batteryId: newBatteryId,
+          batStatus: true,
+          userId,
+          assignedAt: new Date(),
+        })
+      )
+      .unwrap();
+
+    // users collection
+    // - update the prevBatteryId
+    // - set the batteryId to new batteryId
+    await thunkAPI.dispatch(
+      updateUserBattery({
+        userId,
+        oldBatteryId,
+        newBatteryId,
+      })
+    );
   }
 );
 
@@ -136,10 +189,23 @@ const batterySlice = createSlice({
       })
       .addCase(updateBattery.fulfilled, (state, { payload }) => {
         state.isBatteryLoading = false;
+        console.log("update Battery successfull...");
       })
       .addCase(updateBattery.rejected, (state, { payload }) => {
         state.isBatteryLoading = false;
         alert("error in updateBattery");
+        console.log(payload);
+      })
+      .addCase(swapBattery.pending, (state, action) => {
+        state.isBatteryLoading = true;
+      })
+      .addCase(swapBattery.fulfilled, (state, { payload }) => {
+        state.isBatteryLoading = false;
+        toast.success("swap successfull");
+      })
+      .addCase(swapBattery.rejected, (state, { payload }) => {
+        state.isBatteryLoading = false;
+        toast.error("error in swapBattery");
         console.log(payload);
       });
   },
