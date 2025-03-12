@@ -10,6 +10,7 @@ import Navbar from "./Navbar";
 import NewBatteryForm from "./NewBatteryForm";
 import NewBikeForm from "./NewBikeForm";
 import ProfileRow from "./ProfileRow";
+import SwapForm from "./SwapForm";
 import TableHeader from "./TableHeader";
 import TableRow from "./TableRow";
 import ToggleSidebar from "./ToggleSidebar";
@@ -36,4 +37,5 @@ export {
   NewBikeForm,
   BatteriesTable,
   NewBatteryForm,
+  SwapForm,
 };

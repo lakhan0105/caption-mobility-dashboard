@@ -41,7 +41,13 @@ function UserBatteryDetails({
         </div>
 
         {/* SWAP BATTERY BUTTON */}
-        <button>swap</button>
+        <button
+          onClick={() => {
+            dispatch(showModal());
+          }}
+        >
+          swap
+        </button>
       </div>
 
       <div>

@@ -59,7 +59,7 @@ function Tabs({ userDetails, handleReturnBike }) {
       }
     } catch (error) {
       setIsLoading(false);
-      alert("error while getting the user bike details");
+      toast.error("error while getting the user bike details");
       console.log(error);
     }
   }
