@@ -12,7 +12,7 @@ function SmallSidebar({ handleToggleSmallSidebar, smallSidebarState }) {
         width: smallSidebarState ? "100%" : "0%",
         paddingLeft: smallSidebarState ? "2rem" : "0%",
       }}
-      className="overflow-hidden bg-gray-200 fixed top-0 bottom-0 left-0 z-50 border-r"
+      className="overflow-hidden bg-gray-200 fixed top-0 bottom-0 left-0 z-50 border-"
     >
       <div className="h-[80px] md:h-[100px] flex items-center gap-5 justify-between pr-4 borde">
         <h2 className="font-semibold text-xl">Dashboard</h2>

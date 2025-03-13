@@ -13,7 +13,9 @@ function UserBikeDetails({ userBikeId, handleReturnBike }) {
   const { bikeById, isLoading } = useSelector((state) => state.bikeReducer);
 
   useEffect(() => {
-    dispatch(getBikeById(userBikeId));
+    if (userBikeId) {
+      dispatch(getBikeById(userBikeId));
+    }
   }, [userBikeId]);
 
   if (isLoading) {
@@ -33,12 +35,12 @@ function UserBikeDetails({ userBikeId, handleReturnBike }) {
     );
   }
 
-  // if (isLoading) {
-  //   return <h2 className="p-2">Loading...</h2>;
-  // }
+  if (isLoading) {
+    return <h2 className="p-2">Loading...</h2>;
+  }
 
   return (
-    <div className="text-sm p-2">
+    <div className="text-sm px-4 py-1.5">
       <div className="mb-5 flex justify-between items-start">
         <div>
           <h3 className="capitalize mb-0.5">bike Register Number</h3>

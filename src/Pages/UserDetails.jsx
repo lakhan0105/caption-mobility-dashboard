@@ -9,6 +9,8 @@ import { AssignForm, Modal, SwapForm } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
 import { returnBikeFrmUser } from "../features/user/UserSlice";
 import Tabs from "../Components/Tabs/Tabs";
+import { Avatar } from "@mui/material";
+import { deepOrange, deepPurple } from "@mui/material/colors";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -65,19 +67,31 @@ function UserDetails() {
     const { $id, userName } = userDetails;
 
     return (
-      <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-5 pt-8">
+      <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
         <div className="">
           {/* TOP CARD */}
-          <div className="flex items-center gap-10 py-5 mr-10">
+          <div
+            className="flex items-cente gap-8 pt-14 pb-10 bg-gradient-to-r from-[#39434d] to-[#252c37]
+ px-5 text-white"
+          >
             {/* PROFILE ICON */}
             <div className="text-[85px]">
-              <FaUserCircle />
+              <Avatar
+                sx={{
+                  width: "85px",
+                  height: "85px",
+                  fontSize: "2.3rem",
+                  bgcolor: deepPurple[400],
+                }}
+              >
+                {userName[0].toUpperCase()}
+              </Avatar>
             </div>
 
             {/* BASIC INFO */}
-            <div className="mt-2">
-              <h2 className="text-x font-medium">{userName}</h2>
-              <p className="text-xs font-medium text-zinc-500 mt-1">{$id}</p>
+            <div className="mt-0">
+              <h2 className="text-2xl font-semibold">{userName}</h2>
+              <p className="text-xs font-medium tex-zinc-500 mt-1.5">{$id}</p>
 
               {/* BUTTONS TO CALL AND MESSAGE THE USER */}
               <div className="mt-2.5">
@@ -85,12 +99,12 @@ function UserDetails() {
                   <SimpleBtn
                     name={"call"}
                     icon={<FaPhoneAlt />}
-                    extraStyles={"capitalize text-xs border-black/40"}
+                    extraStyles={"capitalize text-xs border-white/40"}
                   />
                   <SimpleBtn
                     name={"messsage"}
                     icon={<FaRegMessage />}
-                    extraStyles={"capitalize text-xs border-black/40"}
+                    extraStyles={"capitalize text-xs border-white/40"}
                   />
                 </div>
               </div>
