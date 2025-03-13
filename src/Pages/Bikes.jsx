@@ -13,15 +13,13 @@ import { showModal } from "../features/modal/modalSlice";
 function Bikes() {
   const dispatch = useDispatch();
 
-  const { bikesList, isBikesLoading } = useSelector(
-    (state) => state.bikeReducer
-  );
+  const { bikesList, isLoading } = useSelector((state) => state.bikeReducer);
 
   useEffect(() => {
     dispatch(getBikes());
   }, []);
 
-  if (isBikesLoading) {
+  if (isLoading) {
     return <h2>Loading...</h2>;
   }
 
@@ -42,7 +40,7 @@ function Bikes() {
 
         {/* bikes table */}
         {bikesList && <BikesTable data={bikesList} />}
-        {isBikesLoading && <h2>Loading...</h2>}
+        {isLoading && <h2>Loading...</h2>}
 
         <Modal>
           <NewBikeForm />

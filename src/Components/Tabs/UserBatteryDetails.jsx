@@ -1,17 +1,20 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import moment from "moment";
 import SimpleBtn from "../Buttons/SimpleBtn";
 import { FaPlus } from "react-icons/fa6";
 import { showModal } from "../../features/modal/modalSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { getBatteryById } from "../../features/battery/batterySlice";
 
-function UserBatteryDetails({
-  isLoading,
-  userBatteryDetailsState,
-  handleReturnBike,
-  userBatteryId,
-}) {
+function UserBatteryDetails({ userBatteryId }) {
   const dispatch = useDispatch();
+  const { batteryById, isLoading } = useSelector(
+    (state) => state.batteryReducer
+  );
+
+  useEffect(() => {
+    dispatch(getBatteryById(userBatteryId));
+  }, [userBatteryId, dispatch]);
 
   if (!userBatteryId) {
     return (
@@ -34,10 +37,8 @@ function UserBatteryDetails({
     <div className="text-sm p-2">
       <div className="mb-5 flex justify-between items-start">
         <div>
-          <h3 className="capitalize">battery Register Number</h3>
-          <p className="text-[0.7rem] text-zinc-500">
-            {userBatteryDetailsState?.batRegNum}
-          </p>
+          <h3 className="capitalize mb-0.5">battery Register Number</h3>
+          <p className="text-xs text-zinc-500">{batteryById?.batRegNum}</p>
         </div>
 
         {/* SWAP BATTERY BUTTON */}
@@ -51,9 +52,9 @@ function UserBatteryDetails({
       </div>
 
       <div>
-        <h3 className="capitalize">Assigned at</h3>
-        <p className="text-[0.7rem] text-zinc-500">
-          {moment(userBatteryDetailsState?.assignedAt).format("lll")}
+        <h3 className="capitalize mb-0.5">Assigned at</h3>
+        <p className="text-xs text-zinc-500">
+          {moment(batteryById?.assignedAt).format("lll")}
         </p>
       </div>
     </div>

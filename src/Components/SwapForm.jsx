@@ -15,7 +15,7 @@ function SwapForm({ userDetails, getUser }) {
   }, []);
 
   // get the list of available batteries
-  const { availableBatteries, isBatteryLoading } = useSelector(
+  const { availableBatteries, isLoading } = useSelector(
     (state) => state.batteryReducer
   );
 
@@ -26,8 +26,6 @@ function SwapForm({ userDetails, getUser }) {
     const value = e.target.value;
     setSelectedBatteryId(value);
   }
-
-  console.log(userDetails);
 
   // handleSwap
   function handleSwap(e) {
@@ -49,6 +47,10 @@ function SwapForm({ userDetails, getUser }) {
       .catch((error) => {
         console.log("swap failed:", error);
       });
+  }
+
+  if (isLoading) {
+    return <h2>Loading...</h2>;
   }
 
   return (

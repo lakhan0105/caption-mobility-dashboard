@@ -16,35 +16,35 @@ function UserFullDetails({ userFullDetailsState }) {
     <div className="text-sm p-2">
       <div className="mb-5 flex justify-between items-start">
         <div>
-          <h3 className="capitalize">User Id</h3>
-          <p className="text-[0.7rem] text-zinc-500">{$id}</p>
+          <h3 className="capitalize mb-0.5">User Id</h3>
+          <p className="text-xs text-zinc-500">{$id}</p>
         </div>
       </div>
 
       <div className="mb-5 flex justify-between items-start">
         <div>
-          <h3 className="capitalize">name</h3>
-          <p className="text-[0.7rem] text-zinc-500">{userName}</p>
+          <h3 className="capitalize mb-0.5">name</h3>
+          <p className="text-xs text-zinc-500">{userName}</p>
         </div>
       </div>
 
       <div className="mb-5 flex justify-between items-start">
         <div>
-          <h3 className="capitalize">company</h3>
-          <p className="text-[0.7rem] text-zinc-500">{userCompany}</p>
+          <h3 className="capitalize mb-0.5">company</h3>
+          <p className="text-xs text-zinc-500">{userCompany}</p>
         </div>
       </div>
 
       <div className="mb-5 flex justify-between items-start">
         <div>
-          <h3 className="capitalize">phone</h3>
-          <p className="text-[0.7rem] text-zinc-500">{userPhone}</p>
+          <h3 className="capitalize mb-0.5">phone</h3>
+          <p className="text-xs text-zinc-500">{userPhone}</p>
         </div>
       </div>
 
       <div>
-        <h3 className="capitalize">Account created at</h3>
-        <p className="text-[0.7rem] text-zinc-500">
+        <h3 className="capitalize mb-0.5">Account created at</h3>
+        <p className="text-xs text-zinc-500">
           {moment($createdAt).format("lll")}
         </p>
       </div>

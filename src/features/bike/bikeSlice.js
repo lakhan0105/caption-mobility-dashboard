@@ -7,9 +7,10 @@ const dbId = import.meta.env.VITE_DB_ID;
 const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
 
 const initialState = {
-  isBikeLoading: null,
+  isLoading: null,
   bikesList: null,
   availableBikes: null,
+  bikeById: null,
 };
 
 export const getBikes = createAsyncThunk(
@@ -21,6 +22,26 @@ export const getBikes = createAsyncThunk(
       return response.documents;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+export const getBikeById = createAsyncThunk(
+  "bike/getBikeById",
+  async (userBikeId, { rejectWithValue }) => {
+    console.log(userBikeId);
+    try {
+      console.log("Fetching bike details...");
+      const response = await databases.getDocument(
+        dbId,
+        bikesCollId,
+        userBikeId
+      );
+      console.log(response);
+      return response;
+    } catch (error) {
+      toast.error("Error while getting the user bike details by id");
+      return rejectWithValue(error.message);
     }
   }
 );
@@ -97,49 +118,61 @@ const bikeSlice = createSlice({
   extraReducers(builder) {
     builder
       .addCase(getBikes.pending, (state, action) => {
-        state.isBikeLoading = true;
+        state.isLoading = true;
       })
       .addCase(getBikes.fulfilled, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
         console.log("we found the bikes data");
         state.bikesList = payload;
       })
       .addCase(getBikes.rejected, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
+      })
+      .addCase(getBikeById.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getBikeById.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.bikeById = action.payload;
+      })
+      .addCase(getBikeById.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
       .addCase(getAvailableBikes.pending, (state, action) => {
-        state.isBikeLoading = true;
+        state.isLoading = true;
       })
       .addCase(getAvailableBikes.fulfilled, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
         console.log("we found the available bikes ");
         state.availableBikes = payload;
       })
       .addCase(getAvailableBikes.rejected, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
         alert("error in getAvailableBikes");
         console.log(payload);
       })
       .addCase(updateBike.pending, (state, action) => {
-        state.isBikeLoading = true;
+        state.isLoading = true;
       })
       .addCase(updateBike.fulfilled, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
         console.log("updated the bike details...");
       })
       .addCase(updateBike.rejected, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
         toast.error("error in updateBike");
         console.log(payload);
       })
       .addCase(addBike.pending, (state, action) => {
-        state.isBikeLoading = true;
+        state.isLoading = true;
       })
       .addCase(addBike.fulfilled, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
       })
       .addCase(addBike.rejected, (state, { payload }) => {
-        state.isBikeLoading = false;
+        state.isLoading = false;
         alert("error in addNewBike");
         console.log(payload);
       });

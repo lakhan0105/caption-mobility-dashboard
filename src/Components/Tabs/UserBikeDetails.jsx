@@ -3,16 +3,22 @@ import SimpleBtn from "../Buttons/SimpleBtn";
 import { IoIosReturnLeft } from "react-icons/io";
 import moment from "moment";
 import { FaPlus } from "react-icons/fa6";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { showModal } from "../../features/modal/modalSlice";
+import { getBikeById } from "../../features/bike/bikeSlice";
 
-function UserBikeDetails({
-  isLoading,
-  userBikeId,
-  userBikeDetailsState,
-  handleReturnBike,
-}) {
+function UserBikeDetails({ userBikeId, handleReturnBike }) {
   const dispatch = useDispatch();
+
+  const { bikeById, isLoading } = useSelector((state) => state.bikeReducer);
+
+  useEffect(() => {
+    dispatch(getBikeById(userBikeId));
+  }, [userBikeId]);
+
+  if (isLoading) {
+    return <h2>Loading...</h2>;
+  }
 
   if (!userBikeId) {
     return (
@@ -27,18 +33,16 @@ function UserBikeDetails({
     );
   }
 
-  if (isLoading) {
-    return <h2 className="p-2">Loading...</h2>;
-  }
+  // if (isLoading) {
+  //   return <h2 className="p-2">Loading...</h2>;
+  // }
 
   return (
     <div className="text-sm p-2">
       <div className="mb-5 flex justify-between items-start">
         <div>
-          <h3 className="capitalize">bike Register Number</h3>
-          <p className="text-[0.7rem] text-zinc-500">
-            {userBikeDetailsState?.bikeRegNum}
-          </p>
+          <h3 className="capitalize mb-0.5">bike Register Number</h3>
+          <p className="text-xs text-zinc-500">{bikeById?.bikeRegNum}</p>
         </div>
 
         {/* RETURN BIKE BUTTON */}
@@ -51,9 +55,9 @@ function UserBikeDetails({
       </div>
 
       <div>
-        <h3 className="capitalize">Assigned at</h3>
-        <p className="text-[0.7rem] text-zinc-500">
-          {moment(userBikeDetailsState?.assignedAt).format("lll")}
+        <h3 className="capitalize mb-0.5">Assigned at</h3>
+        <p className="text-xs text-zinc-500">
+          {moment(bikeById?.assignedAt).format("lll")}
         </p>
       </div>
     </div>
