@@ -15,7 +15,7 @@ function SwapForm({ userDetails, getUser }) {
   }, []);
 
   // get the list of available batteries
-  const { availableBatteries, isLoading } = useSelector(
+  const { availableBatteries, isLoading, swapLoading } = useSelector(
     (state) => state.batteryReducer
   );
 
@@ -28,29 +28,31 @@ function SwapForm({ userDetails, getUser }) {
   }
 
   // handleSwap
-  function handleSwap(e) {
+  async function handleSwap(e) {
     e.preventDefault();
 
-    // swapBattery -> closeModal
-    dispatch(
-      swapBattery({
-        userId: userDetails.$id,
-        oldBatteryId: userDetails?.batteryId,
-        newBatteryId: selectedBatteryId,
-      })
-    )
-      .unwrap()
-      .then(() => {
-        dispatch(closeModal());
-        dispatch(getUser());
-      })
-      .catch((error) => {
-        console.log("swap failed:", error);
-      });
+    try {
+      await dispatch(
+        swapBattery({
+          userId: userDetails.$id,
+          oldBatteryId: userDetails?.batteryId,
+          newBatteryId: selectedBatteryId,
+        })
+      ).unwrap();
+
+      dispatch(closeModal());
+      getUser();
+    } catch (error) {
+      console.log("swap failed:", error);
+    }
   }
 
   if (isLoading) {
-    return <h2>Loading...</h2>;
+    return <h2 className="bg-white rounded p-2 text-sm">Loading...</h2>;
+  }
+
+  if (swapLoading) {
+    return <h2 className="bg-white rounded p-2 text-sm">Swap in process..</h2>;
   }
 
   return (

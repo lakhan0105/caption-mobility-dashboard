@@ -13,8 +13,10 @@ function UserBatteryDetails({ userBatteryId }) {
   );
 
   useEffect(() => {
-    dispatch(getBatteryById(userBatteryId));
-  }, [userBatteryId, dispatch]);
+    if (userBatteryId) {
+      dispatch(getBatteryById(userBatteryId));
+    }
+  }, [userBatteryId]);
 
   if (!userBatteryId) {
     return (
@@ -34,7 +36,7 @@ function UserBatteryDetails({ userBatteryId }) {
   }
 
   return (
-    <div className="text-sm p-2">
+    <div className="text-sm px-4 py-1.5">
       <div className="mb-5 flex justify-between items-start">
         <div>
           <h3 className="capitalize mb-0.5">battery Register Number</h3>

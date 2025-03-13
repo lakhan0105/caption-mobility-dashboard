@@ -40,17 +40,18 @@ function Tabs({ userDetails, handleReturnBike }) {
   const [userFullDetailsState, setUserFullDetailsState] = useState(userDetails);
 
   return (
-    <section className="mt-8">
+    <section>
       {/* TAB HEADINGS */}
-      <div className="flex text-[0.9rem]  rounded border-b mb-4">
+      <div
+        className="h-[50px] flex text-sm px- pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37]
+ px-5 text-white mb-4"
+      >
         {tabHeadingsData.map((heading) => {
           const { id, name, label } = heading;
           return (
             <button
-              className={`border-b w-[100px] py-1 capitalize ${
-                name === activeTab
-                  ? "font-medium text-blue-500 border-blue-500"
-                  : ""
+              className={`mb-2 w-[100px] py-1 capitalize ${
+                name === activeTab ? "border-b border-white-500" : ""
               }`}
               name={name}
               key={id}

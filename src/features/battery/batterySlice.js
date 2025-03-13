@@ -13,6 +13,7 @@ const initialState = {
   batteriesList: null,
   availableBatteries: null,
   batteryById: null,
+  swapLoading: false,
 };
 
 // get all batteries list
@@ -165,7 +166,7 @@ export const swapBattery = createAsyncThunk(
 
       return { success: true };
     } catch (error) {
-      thunkAPI.rejectWithValue(error);
+      return thunkAPI.rejectWithValue(error);
     }
   }
 );
@@ -236,14 +237,14 @@ const batterySlice = createSlice({
         console.log(payload);
       })
       .addCase(swapBattery.pending, (state, action) => {
-        state.isLoading = true;
+        state.swapLoading = true;
       })
       .addCase(swapBattery.fulfilled, (state, { payload }) => {
-        state.isLoading = false;
+        state.swapLoading = false;
         toast.success("swap successfull");
       })
       .addCase(swapBattery.rejected, (state, { payload }) => {
-        state.isLoading = false;
+        state.swapLoading = false;
         toast.error("error in swapBattery");
         console.log(payload);
       });
