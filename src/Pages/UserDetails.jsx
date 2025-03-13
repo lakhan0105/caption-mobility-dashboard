@@ -61,8 +61,6 @@ function UserDetails() {
     getUser();
   }
 
-  console.log(userDetails);
-
   if (userDetails) {
     const { $id, userName } = userDetails;
 
@@ -79,15 +77,21 @@ function UserDetails() {
             {/* BASIC INFO */}
             <div className="mt-2">
               <h2 className="text-x font-medium">{userName}</h2>
-              <p className="text-xs font-medium text-zinc-500 mt-1 mb-2">
-                {$id}
-              </p>
+              <p className="text-xs font-medium text-zinc-500 mt-1">{$id}</p>
 
               {/* BUTTONS TO CALL AND MESSAGE THE USER */}
-              <div>
-                <div className=" flex items-center gap-2 text-xs">
-                  <SimpleBtn name={"call"} icon={<FaPhoneAlt />} />
-                  <SimpleBtn name={"messsage"} icon={<FaRegMessage />} />
+              <div className="mt-2.5">
+                <div className=" flex items-center gap-3">
+                  <SimpleBtn
+                    name={"call"}
+                    icon={<FaPhoneAlt />}
+                    extraStyles={"capitalize text-xs border-black/40"}
+                  />
+                  <SimpleBtn
+                    name={"messsage"}
+                    icon={<FaRegMessage />}
+                    extraStyles={"capitalize text-xs border-black/40"}
+                  />
                 </div>
               </div>
             </div>

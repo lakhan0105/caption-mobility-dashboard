@@ -9,9 +9,10 @@ const batteriesCollId = import.meta.env.VITE_BATTERIES_COLL_ID;
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 
 const initialState = {
-  isBatteryLoading: null,
+  isLoading: null,
   batteriesList: null,
   availableBatteries: null,
+  batteryById: null,
 };
 
 // get all batteries list
@@ -24,6 +25,24 @@ export const getBatteriesList = createAsyncThunk(
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+export const getBatteryById = createAsyncThunk(
+  "battery/getBatteryById",
+  async (userBatteryId, thunkAPI) => {
+    try {
+      console.log("Fetching user battery details...");
+      const response = await databases.getDocument(
+        dbId,
+        batteriesCollId,
+        userBatteryId
+      );
+      return response;
+    } catch (error) {
+      console.error("Error while getting battery details:", error);
+      return thunkAPI.rejectWithValue("Failed to fetch battery details");
     }
   }
 );
@@ -99,47 +118,55 @@ export const swapBattery = createAsyncThunk(
   async (data, thunkAPI) => {
     const { oldBatteryId, newBatteryId, userId } = data;
 
-    // battery collection
-    // return the old battery document
-    // - change battery status to available
-    // - remove the currOwner from old battery
-    // - update the returnedAt attribute
-    await thunkAPI
-      .dispatch(
-        updateBattery({
-          batteryId: oldBatteryId,
-          batStatus: false,
-          userId: null,
-          returnedAt: new Date(),
-        })
-      )
-      .unwrap();
+    try {
+      // battery collection
+      // return the old battery document
+      // - change battery status to available
+      // - remove the currOwner from old battery
+      // - update the returnedAt attribute
+      await thunkAPI
+        .dispatch(
+          updateBattery({
+            batteryId: oldBatteryId,
+            batStatus: false,
+            userId: null,
+            returnedAt: new Date(),
+          })
+        )
+        .unwrap();
 
-    // assign new battery
-    // - change battery status to not available
-    // - add the currOwner
-    // - update the assignedAt
-    await thunkAPI
-      .dispatch(
-        updateBattery({
-          batteryId: newBatteryId,
-          batStatus: true,
-          userId,
-          assignedAt: new Date(),
-        })
-      )
-      .unwrap();
+      // assign new battery
+      // - change battery status to not available
+      // - add the currOwner
+      // - update the assignedAt
+      await thunkAPI
+        .dispatch(
+          updateBattery({
+            batteryId: newBatteryId,
+            batStatus: true,
+            userId,
+            assignedAt: new Date(),
+          })
+        )
+        .unwrap();
 
-    // users collection
-    // - update the prevBatteryId
-    // - set the batteryId to new batteryId
-    await thunkAPI.dispatch(
-      updateUserBattery({
-        userId,
-        oldBatteryId,
-        newBatteryId,
-      })
-    );
+      // users collection
+      // - update the prevBatteryId
+      // - set the batteryId to new batteryId
+      await thunkAPI
+        .dispatch(
+          updateUserBattery({
+            userId,
+            oldBatteryId,
+            newBatteryId,
+          })
+        )
+        .unwrap();
+
+      return { success: true };
+    } catch (error) {
+      thunkAPI.rejectWithValue(error);
+    }
   }
 );
 
@@ -150,61 +177,73 @@ const batterySlice = createSlice({
   extraReducers(builder) {
     builder
       .addCase(getBatteriesList.pending, (state, action) => {
-        state.isBatteryLoading = true;
+        state.isLoading = true;
       })
       .addCase(getBatteriesList.fulfilled, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         state.batteriesList = payload.documents;
       })
       .addCase(getBatteriesList.rejected, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         alert("error in getBatteriesList");
         console.log(payload);
       })
+      .addCase(getBatteryById.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(getBatteryById.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.batteryById = action.payload;
+      })
+      .addCase(getBatteryById.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
       .addCase(addNewBattery.pending, (state, action) => {
-        state.isBatteryLoading = true;
+        state.isLoading = true;
       })
       .addCase(addNewBattery.fulfilled, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
       })
       .addCase(addNewBattery.rejected, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         alert("error in addNewBattery");
         console.log(payload);
       })
       .addCase(getAvailableBatteries.pending, (state, action) => {
-        state.isBatteryLoading = true;
+        state.isLoading = true;
       })
       .addCase(getAvailableBatteries.fulfilled, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         state.availableBatteries = payload.documents;
       })
       .addCase(getAvailableBatteries.rejected, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         alert("error in getAvailableBatteries");
         console.log(payload);
       })
       .addCase(updateBattery.pending, (state, action) => {
-        state.isBatteryLoading = true;
+        state.isLoading = true;
       })
       .addCase(updateBattery.fulfilled, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         console.log("update Battery successfull...");
       })
       .addCase(updateBattery.rejected, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         alert("error in updateBattery");
         console.log(payload);
       })
       .addCase(swapBattery.pending, (state, action) => {
-        state.isBatteryLoading = true;
+        state.isLoading = true;
       })
       .addCase(swapBattery.fulfilled, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         toast.success("swap successfull");
       })
       .addCase(swapBattery.rejected, (state, { payload }) => {
-        state.isBatteryLoading = false;
+        state.isLoading = false;
         toast.error("error in swapBattery");
         console.log(payload);
       });
