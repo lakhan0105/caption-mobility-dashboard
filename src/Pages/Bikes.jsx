@@ -6,9 +6,12 @@ import {
   GenericTable,
   Modal,
   NewBikeForm,
+  PageHeader,
   TableHeader,
 } from "../Components";
 import { showModal } from "../features/modal/modalSlice";
+
+import { MdOutlineElectricBike } from "react-icons/md";
 
 function Bikes() {
   const dispatch = useDispatch();
@@ -24,19 +27,16 @@ function Bikes() {
   }
 
   return (
-    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-5 pt-8">
+    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-0 pt-0">
       <div className="max-w-[900px]">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl font-medium">Bikes List</h2>
-          <button
-            className="border px-4 py-2.5 rounded-md bg-blue-500 text-white text-sm cursor-pointer"
-            onClick={() => {
-              dispatch(showModal());
-            }}
-          >
-            + Add New Bike
-          </button>
-        </div>
+        <PageHeader
+          heading={"bikes list"}
+          btnName={"+ add new bike"}
+          handleFunction={() => {
+            dispatch(showModal());
+          }}
+          icon={<MdOutlineElectricBike />}
+        />
 
         {/* bikes table */}
         {bikesList && <BikesTable data={bikesList} />}

@@ -1,8 +1,16 @@
 import React, { useEffect } from "react";
-import { Modal, UserCard, UserForm, UsersTable } from "../Components";
+import {
+  Modal,
+  PageHeader,
+  UserCard,
+  UserForm,
+  UsersTable,
+} from "../Components";
 import { useDispatch, useSelector } from "react-redux";
 import { getUsersList } from "../features/user/UserSlice";
 import { showModal } from "../features/modal/modalSlice";
+
+import { FaUsers } from "react-icons/fa";
 
 function Users() {
   const { usersList } = useSelector((state) => state.userReducer);
@@ -26,17 +34,15 @@ function Users() {
   }
 
   return (
-    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-5 pt-8">
+    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
       <div className="max-w-[900px]">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl font-medium">Users List</h2>
-          <button
-            className="border px-4 py-2.5 rounded-md bg-blue-500 text-white text-sm cursor-pointer"
-            onClick={handleNewUser}
-          >
-            + Add New User
-          </button>
-        </div>
+        {/* PAGE TOP SECTION*/}
+        <PageHeader
+          heading={"users list"}
+          btnName={"+ add new user"}
+          handleFunction={handleNewUser}
+          icon={<FaUsers />}
+        />
 
         {/* users table */}
         {usersList && <UsersTable data={usersList} />}
