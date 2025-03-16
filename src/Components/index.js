@@ -9,6 +9,7 @@ import Modal from "./Modal";
 import Navbar from "./Navbar";
 import NewBatteryForm from "./NewBatteryForm";
 import NewBikeForm from "./NewBikeForm";
+import PageHeader from "./PageHeader";
 import ProfileRow from "./ProfileRow";
 import SwapForm from "./SwapForm";
 import TableHeader from "./TableHeader";
@@ -38,4 +39,5 @@ export {
   BatteriesTable,
   NewBatteryForm,
   SwapForm,
+  PageHeader,
 };
