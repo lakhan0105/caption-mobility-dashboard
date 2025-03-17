@@ -9,7 +9,7 @@ function SmallNavbar() {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 bg-gradient-to-r bg-gray-300 border
-  h-[60px] px-5 shadow-sm"
+  h-[60px] px-5 shadow-sm z-50"
     >
       <ul className="flex items-center justify-between gap-8 h-full capitalize">
         {/* USERS */}
@@ -43,7 +43,7 @@ function SmallNavbar() {
         </NavLink>
 
         {/* SWAPS */}
-        <NavLink to={"dashboard/batteries"}>
+        <NavLink to={"dashboard/swaps"}>
           <li className="flex flex-col items-center">
             <span className="text-lg">
               <PiSwapBold />
