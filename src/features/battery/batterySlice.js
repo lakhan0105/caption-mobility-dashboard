@@ -3,6 +3,7 @@ import { databases } from "../../appwrite";
 import { ID, Query } from "appwrite";
 import { updateUserBattery } from "../user/UserSlice";
 import toast from "react-hot-toast";
+import { addRecord } from "../record/recordSlice";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const batteriesCollId = import.meta.env.VITE_BATTERIES_COLL_ID;
@@ -117,7 +118,9 @@ export const updateBattery = createAsyncThunk(
 export const swapBattery = createAsyncThunk(
   "user/swapBatteryToUser",
   async (data, thunkAPI) => {
-    const { oldBatteryId, newBatteryId, userId } = data;
+    console.log("data in swap battery:", data);
+    const { oldBatteryId, newBatteryId, userId, oldBatRegNum, newBatRegNum } =
+      data;
 
     try {
       // battery collection
@@ -163,6 +166,11 @@ export const swapBattery = createAsyncThunk(
           })
         )
         .unwrap();
+
+      // add the record in the record collection
+
+      console.log(data);
+      await thunkAPI.dispatch(addRecord({ ...data, swapDate: new Date() }));
 
       return { success: true };
     } catch (error) {

@@ -1,11 +1,14 @@
 import React from "react";
 
-function SubmitBtn({ text, handleSubmit }) {
+function SubmitBtn({ text, handleSubmit, disabled }) {
   return (
     <button
       type="submit"
-      className="w-full bg-blue-500 text-white text-sm py-2 rounded"
+      className={`w-full ${
+        disabled ? "bg-blue-300" : "bg-blue-500"
+      } text-white text-sm py-2 rounded`}
       onClick={handleSubmit}
+      disabled={disabled}
     >
       {text}
     </button>

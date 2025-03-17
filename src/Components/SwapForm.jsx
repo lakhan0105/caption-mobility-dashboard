@@ -2,15 +2,22 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import { closeModal } from "../features/modal/modalSlice";
+import { IoClose } from "react-icons/io5";
+
 import {
   getAvailableBatteries,
+  getBatteryById,
   swapBattery,
 } from "../features/battery/batterySlice";
+
+import Select from "react-select";
+import { getActiveUsers } from "../features/user/UserSlice";
 
 function SwapForm({ userDetails, getUser }) {
   const dispatch = useDispatch();
 
   useEffect(() => {
+    dispatch(getActiveUsers());
     dispatch(getAvailableBatteries());
   }, []);
 
@@ -19,13 +26,37 @@ function SwapForm({ userDetails, getUser }) {
     (state) => state.batteryReducer
   );
 
-  const [selectedBatteryId, setSelectedBatteryId] = useState();
+  // get the list of active users
+  const { activeUsers, isUserLoading } = useSelector(
+    (state) => state.userReducer
+  );
 
-  // handleChange
-  function handleChange(e) {
-    const value = e.target.value;
-    setSelectedBatteryId(value);
-  }
+  const [selectedBattery, setSelectedBattery] = useState();
+  const [selectedUser, setSelectedUser] = useState(userDetails?.$id || null);
+  const [oldBatteryDetails, setOldBatteryDetails] = useState();
+
+  const [options, setOptions] = useState([]);
+  const [batteryOptions, setBatteryOptions] = useState();
+
+  // set the options
+  useEffect(() => {
+    // options for active users
+    console.log("from useeffect...");
+    setOptions(
+      activeUsers?.map((user) => {
+        const { $id, userName, batteryId } = user;
+        return { value: $id, $id, label: userName, batteryId, userName };
+      })
+    );
+
+    // options for available batteries
+    setBatteryOptions(
+      availableBatteries?.map((battery) => {
+        const { $id, batRegNum } = battery;
+        return { value: $id, $id, label: batRegNum, batRegNum };
+      })
+    );
+  }, [activeUsers]);
 
   // handleSwap
   async function handleSwap(e) {
@@ -34,22 +65,48 @@ function SwapForm({ userDetails, getUser }) {
     try {
       await dispatch(
         swapBattery({
-          userId: userDetails.$id,
-          oldBatteryId: userDetails?.batteryId,
-          newBatteryId: selectedBatteryId,
+          userId: userDetails?.$id || selectedUser?.$id,
+          userName: userDetails?.userName || selectedUser?.userName,
+          oldBatteryId: userDetails?.batteryId || oldBatteryDetails?.$id,
+          newBatteryId: selectedBattery?.$id,
+          newBatRegNum: selectedBattery?.batRegNum,
+          oldBatRegNum: oldBatteryDetails?.batRegNum,
         })
       ).unwrap();
 
       dispatch(closeModal());
-      getUser();
+      if (userDetails) {
+        getUser();
+      }
     } catch (error) {
       console.log("swap failed:", error);
     }
   }
 
-  if (isLoading) {
-    return <h2 className="bg-white rounded p-2 text-sm">Loading...</h2>;
+  function handleOldBatteryDetails(batteryId) {
+    if (batteryId) {
+      dispatch(getBatteryById(batteryId))
+        .unwrap()
+        .then((battery) => {
+          setOldBatteryDetails(battery);
+        })
+        .catch((error) => {
+          console.log("failed to fetch the battery details by id", error);
+        });
+    } else {
+      setOldBatteryDetails(null);
+    }
   }
+
+  useEffect(() => {
+    if (userDetails) {
+      handleOldBatteryDetails(userDetails?.batteryId);
+    }
+  }, []);
+
+  // if (isLoading) {
+  //   return <h2 className="bg-white rounded p-2 text-sm">Loading...</h2>;
+  // }
 
   if (swapLoading) {
     return <h2 className="bg-white rounded p-2 text-sm">Swap in process..</h2>;
@@ -59,40 +116,61 @@ function SwapForm({ userDetails, getUser }) {
     <form className="bg-white w-full max-w-[400px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative">
       {/* CLOSE MODAL BUTTON */}
       <button
-        className="absolute right-4 top-4 cursor-pointer"
+        className="absolute right-4 top-4 cursor-pointer text-2xl"
         onClick={() => {
           dispatch(closeModal());
         }}
       >
-        close
+        <IoClose />
       </button>
 
       <h3 className="font-semibold text-xl mb-5">SWAP BATTERY</h3>
 
+      {/* SELECT USER */}
+      {/* show this only when the userDetails is not passed as props */}
+      {/* this el can only be shown anywhere except the userDetails page */}
+      {!userDetails && (
+        <div className="leading-loose">
+          <label htmlFor="bike">Select user</label>
+
+          <Select
+            options={options}
+            value={options?.find(
+              (option) => option.value === selectedUser?.$id
+            )}
+            onChange={(user) => {
+              // grab the batteryId from the selected input
+              const { batteryId } = user;
+              setSelectedUser(user);
+
+              // run the getBatteryById only when the batteryId is present or else the swapForm component re-renders and the selected user also resets
+              if (batteryId) {
+                handleOldBatteryDetails(batteryId);
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* if userDetails is passed show the name of that user in swapform */}
+      {userDetails && <h3 className="font-medium">{userDetails?.userName}</h3>}
+
       {/* SELECT INPUT FOR BATTERY  */}
-      <label htmlFor="bike">Select Battery</label>
-      <select
-        name="selectedBatteryId"
-        id="battery"
-        className="border rounded text-sm"
-        onChange={handleChange}
-        value={selectedBatteryId || ""}
-      >
-        <option value="" disabled>
-          batteries
-        </option>
+      <div className="leading-loose">
+        <label htmlFor="bike">Select Battery</label>
+        <Select
+          options={batteryOptions}
+          onChange={(battery) => {
+            setSelectedBattery(battery);
+          }}
+        />
+      </div>
 
-        {availableBatteries?.map((battery) => {
-          const { $id, batRegNum } = battery;
-          return (
-            <option value={$id} key={$id}>
-              {batRegNum}
-            </option>
-          );
-        })}
-      </select>
-
-      <SubmitBtn text={"Swap Battery"} handleSubmit={handleSwap} />
+      <SubmitBtn
+        text={"Swap Battery"}
+        handleSubmit={handleSwap}
+        disabled={!selectedBattery || !selectedUser || isLoading}
+      />
     </form>
   );
 }

@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite.js";
-import { Permission, Role } from "appwrite";
+import { Permission, Query, Role } from "appwrite";
 import { updateBike } from "../bike/bikeSlice.js";
 import { updateBattery } from "../battery/batterySlice.js";
 import toast from "react-hot-toast";
@@ -15,6 +15,7 @@ const initialState = {
   userProfile: null,
   usersList: null,
   errMsg: null,
+  activeUsers: null,
 };
 
 // createUser
@@ -152,15 +153,21 @@ export const updateUserBattery = createAsyncThunk(
   }
 );
 
-// swap the battery for a user
-// users collection
-// - update the previousBatteryId
-// - update the batteryId
-// - increment swap count
-
-// battery collection
-// - set previous battery's currOwner to null
-// - update currOwner
+// getActiveUsers
+export const getActiveUsers = createAsyncThunk(
+  "user/getActiveUsers",
+  async (_, thunkAPI) => {
+    try {
+      const resp = await databases.listDocuments(dbId, usersCollId, [
+        Query.equal("userStatus", [true]),
+      ]);
+      console.log(resp);
+      return resp.documents;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
 
 // return bike from user
 export const returnBikeFrmUser = createAsyncThunk(
@@ -301,6 +308,20 @@ const userSlice = createSlice({
       .addCase(updateUserBattery.rejected, (state, { payload }) => {
         state.isUserLoading = false;
         console.log("error in user/updateUserBattery");
+        console.log(payload);
+      })
+      .addCase(getActiveUsers.pending, (state) => {
+        state.isUserLoading = true;
+        state.errMsg = null;
+      })
+      .addCase(getActiveUsers.fulfilled, (state, action) => {
+        state.isUserLoading = false;
+        console.log("found active users");
+        state.activeUsers = action.payload;
+      })
+      .addCase(getActiveUsers.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/getActiveUsers");
         console.log(payload);
       });
   },

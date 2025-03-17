@@ -28,12 +28,11 @@ function BikesTable({ data }) {
             bikeStatus,
             currOwner,
             assignedAt,
-            history,
             returnedAt,
           } = item;
 
           return (
-            <TableRow cols={bikesTableCols}>
+            <TableRow cols={bikesTableCols} key={item.$id}>
               {/* SL NUMBER */}
               <p className="text-[0.7rem] w-[20px] h-[20px] font-medium border bg-indigo-950 text-white flex items-center justify-center rounded-2xl mt-0.5">
                 {index + 1}

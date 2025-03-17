@@ -17,6 +17,7 @@ import {
   Batteries,
   Bikes,
   StartPage,
+  Swaps,
   UserDetails,
   Users,
 } from "./Pages/index.js";
@@ -46,6 +47,7 @@ const router = createBrowserRouter(
             <Route path="dashboard/users/:id" element={<UserDetails />} />
             <Route path="dashboard/bikes" element={<Bikes />} />
             <Route path="dashboard/batteries" element={<Batteries />} />
+            <Route path="dashboard/swaps" element={<Swaps />} />
           </Route>
         </Route>
       </Route>
