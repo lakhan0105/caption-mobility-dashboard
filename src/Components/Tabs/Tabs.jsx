@@ -1,17 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { databases } from "../../appwrite";
-import moment from "moment";
-import SimpleBtn from "../Buttons/SimpleBtn";
-import { IoIosReturnLeft } from "react-icons/io";
 import UserBikeDetails from "./UserBikeDetails";
 import UserBatteryDetails from "./UserBatteryDetails";
 import UserFullDetails from "./UserFullDetails";
-import { useDispatch, useSelector } from "react-redux";
-import { getBikeById } from "../../features/bike/bikeSlice";
-
-const dbId = import.meta.env.VITE_DB_ID;
-const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
-const batteriesCollId = import.meta.env.VITE_BATTERIES_COLL_ID;
+import UserRentalDetails from "./UserRentalDetails";
 
 function Tabs({ userDetails, handleReturnBike }) {
   const {
@@ -23,9 +14,8 @@ function Tabs({ userDetails, handleReturnBike }) {
 
   // tab Headings Data
   const tabHeadingsData = [
-    { id: 1, name: "user-bike", label: "bike" },
-    { id: 2, name: "user-battery", label: "battery" },
-    { id: 3, name: "user-full-details", label: "full details" },
+    { id: 1, name: "user-rental", label: "rental" },
+    { id: 2, name: "user-full-details", label: "full details" },
   ];
 
   // state to keep track of active tab
@@ -43,8 +33,8 @@ function Tabs({ userDetails, handleReturnBike }) {
     <section>
       {/* TAB HEADINGS */}
       <div
-        className="h-[50px] flex text-sm px- pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37]
- px-5 text-white mb-4"
+        className="h-[50px] flex text-sm pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37]
+ px-5 text-white"
       >
         {tabHeadingsData.map((heading) => {
           const { id, name, label } = heading;
@@ -63,18 +53,13 @@ function Tabs({ userDetails, handleReturnBike }) {
         })}
       </div>
 
-      {/* TAB BIKE CONTENT */}
-      {/* USER BIKE DETAILS */}
-      {activeTab === "user-bike" && (
-        <UserBikeDetails
+      {/* USER RENTAL TAB */}
+      {activeTab === "user-rental" && (
+        <UserRentalDetails
+          userBatteryId={userBatteryId}
           userBikeId={userBikeId}
           handleReturnBike={handleReturnBike}
         />
-      )}
-
-      {/* USER BATTERY DETAILS */}
-      {activeTab === "user-battery" && (
-        <UserBatteryDetails userBatteryId={userBatteryId} />
       )}
 
       {/* USER FULL DETAILS */}

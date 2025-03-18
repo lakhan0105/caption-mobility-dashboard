@@ -5,6 +5,10 @@ import { FaPlus } from "react-icons/fa6";
 import { showModal } from "../../features/modal/modalSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { getBatteryById } from "../../features/battery/batterySlice";
+import InfoCardOne from "../InfoCardOne";
+import { PiBatteryPlusBold, PiSwap } from "react-icons/pi";
+import InfoCardRow from "../InfoCardRow";
+import { PiSwapBold } from "react-icons/pi";
 
 function UserBatteryDetails({ userBatteryId }) {
   const dispatch = useDispatch();
@@ -18,48 +22,38 @@ function UserBatteryDetails({ userBatteryId }) {
     }
   }, [userBatteryId]);
 
-  if (!userBatteryId) {
-    return (
-      <SimpleBtn
-        name={"Assign"}
-        icon={<FaPlus />}
-        extraStyles={"py-1.5 text-xs"}
-        handleBtn={() => {
-          dispatch(showModal());
-        }}
-      />
-    );
-  }
-
   if (isLoading) {
-    return <h2>Loading...</h2>;
+    return <h2 className="text-center">Loading...</h2>;
   }
 
   return (
-    <div className="text-sm px-4 py-1.5">
-      <div className="mb-5 flex justify-between items-start">
-        <div>
-          <h3 className="capitalize mb-0.5">battery Register Number</h3>
-          <p className="text-xs text-zinc-500">{batteryById?.batRegNum}</p>
-        </div>
+    <InfoCardOne
+      heading={"battery details"}
+      headingIcon={<PiBatteryPlusBold />}
+    >
+      {/* BATTERY NUMBER */}
+      <InfoCardRow heading={"battery number"} value={batteryById?.batRegNum} />
 
-        {/* SWAP BATTERY BUTTON */}
-        <button
-          onClick={() => {
-            dispatch(showModal());
-          }}
-        >
-          swap
-        </button>
-      </div>
+      {/* BATTERY ASSIGNMENT DATE */}
+      <InfoCardRow
+        heading={"assigned on"}
+        value={moment(batteryById?.assignedAt).format("lll")}
+      />
 
-      <div>
-        <h3 className="capitalize mb-0.5">Assigned at</h3>
-        <p className="text-xs text-zinc-500">
-          {moment(batteryById?.assignedAt).format("lll")}
-        </p>
-      </div>
-    </div>
+      {/* SWAP BATTERY BUTTON */}
+      <SimpleBtn
+        icon={<PiSwapBold />}
+        name={"Swap"}
+        extraStyles={
+          "border-[1.45px] border-zinc-400/50 font-semibold text-zinc-500 flex-row-reverse text-xs"
+        }
+        handleBtn={() => {
+          dispatch(showModal());
+        }}
+      >
+        swap
+      </SimpleBtn>
+    </InfoCardOne>
   );
 }
 
