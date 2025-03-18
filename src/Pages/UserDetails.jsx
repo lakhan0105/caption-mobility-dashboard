@@ -51,6 +51,7 @@ function UserDetails() {
         userId: userDetails?.$id,
         bikeId: userDetails?.bikeId,
         batteryId: userDetails?.batteryId,
+        totalSwapCount: 0,
       })
     )
       .unwrap()
