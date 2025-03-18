@@ -5,6 +5,8 @@ import { ID, Query } from "appwrite";
 const dbId = import.meta.env.VITE_DB_ID;
 const recordCollId = import.meta.env.VITE_RECORD_COLL_ID;
 
+console.log(recordCollId);
+
 const initialState = {
   isLoading: null,
   records: null,

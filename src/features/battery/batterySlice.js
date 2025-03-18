@@ -119,8 +119,14 @@ export const swapBattery = createAsyncThunk(
   "user/swapBatteryToUser",
   async (data, thunkAPI) => {
     console.log("data in swap battery:", data);
-    const { oldBatteryId, newBatteryId, userId, oldBatRegNum, newBatRegNum } =
-      data;
+    const {
+      oldBatteryId,
+      newBatteryId,
+      userId,
+      oldBatRegNum,
+      newBatRegNum,
+      totalSwapCount,
+    } = data;
 
     try {
       // battery collection
@@ -163,14 +169,20 @@ export const swapBattery = createAsyncThunk(
             userId,
             oldBatteryId,
             newBatteryId,
+            totalSwapCount: totalSwapCount + 1,
           })
         )
         .unwrap();
 
       // add the record in the record collection
-
-      console.log(data);
-      await thunkAPI.dispatch(addRecord({ ...data, swapDate: new Date() }));
+      // also increase the swap count here
+      await thunkAPI.dispatch(
+        addRecord({
+          ...data,
+          totalSwapCount: totalSwapCount + 1,
+          swapDate: new Date(),
+        })
+      );
 
       return { success: true };
     } catch (error) {

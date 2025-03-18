@@ -93,6 +93,7 @@ export const assignBikeToUser = createAsyncThunk(
           userStatus: true,
           bikeId: selectedBikeId,
           batteryId: selectedBatteryId,
+          totalSwapCount: 0,
         }
       );
 
@@ -135,7 +136,7 @@ export const assignBikeToUser = createAsyncThunk(
 export const updateUserBattery = createAsyncThunk(
   "user/updateUserBattery",
   async (data, thunkAPI) => {
-    const { userId, oldBatteryId, newBatteryId } = data;
+    const { userId, oldBatteryId, newBatteryId, totalSwapCount } = data;
 
     try {
       const response = await databases.updateDocument(
@@ -145,6 +146,7 @@ export const updateUserBattery = createAsyncThunk(
         {
           oldBatteryId,
           batteryId: newBatteryId,
+          totalSwapCount,
         }
       );
     } catch (error) {
@@ -172,7 +174,7 @@ export const getActiveUsers = createAsyncThunk(
 // return bike from user
 export const returnBikeFrmUser = createAsyncThunk(
   "user/returnBikeFrmUser",
-  async ({ userId, bikeId, batteryId }, thunkAPI) => {
+  async ({ userId, bikeId, batteryId, totalSwapCount }, thunkAPI) => {
     try {
       const response = await databases.updateDocument(
         dbId,
@@ -182,6 +184,7 @@ export const returnBikeFrmUser = createAsyncThunk(
           userStatus: false,
           bikeId: null,
           batteryId: null,
+          totalSwapCount,
         }
       );
 

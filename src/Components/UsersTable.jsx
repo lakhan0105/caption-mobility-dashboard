@@ -25,7 +25,14 @@ function UsersTable({ data }) {
       {/* TABLE DATA */}
       <div>
         {data.map((item, index) => {
-          const { $id, userName, userCompany, userPhone, userStatus } = item;
+          const {
+            $id,
+            userName,
+            userCompany,
+            userPhone,
+            userStatus,
+            totalSwapCount,
+          } = item;
 
           return (
             <Link key={$id} to={`/dashboard/users/${$id}`}>
@@ -42,7 +49,16 @@ function UsersTable({ data }) {
                       <h2 className="font-medium text-md capitalize">
                         {userName}
                       </h2>
-                      <p className="text-xs font-light">{userPhone}</p>
+                      {/* <p className="text-xs font-light">{userPhone}</p> */}
+                      {totalSwapCount > 0 ? (
+                        <p className="text-[10px]">
+                          {totalSwapCount} {""}
+                          {totalSwapCount <= 1 ? "swap" : "swaps"} with current
+                          bike
+                        </p>
+                      ) : (
+                        <p className="text-[10px] font-light">{userPhone}</p>
+                      )}
                     </div>
                   </div>
                 ) : (

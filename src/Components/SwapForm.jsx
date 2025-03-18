@@ -17,8 +17,11 @@ function SwapForm({ userDetails, getUser }) {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    dispatch(getActiveUsers());
+    if (!userDetails) {
+      dispatch(getActiveUsers());
+    }
     dispatch(getAvailableBatteries());
+    console.log(userDetails);
   }, []);
 
   // get the list of available batteries
@@ -37,15 +40,22 @@ function SwapForm({ userDetails, getUser }) {
 
   const [options, setOptions] = useState([]);
   const [batteryOptions, setBatteryOptions] = useState();
+  const [swapCount, setSwapCount] = useState();
 
   // set the options
   useEffect(() => {
     // options for active users
-    console.log("from useeffect...");
     setOptions(
       activeUsers?.map((user) => {
-        const { $id, userName, batteryId } = user;
-        return { value: $id, $id, label: userName, batteryId, userName };
+        const { $id, userName, batteryId, totalSwapCount } = user;
+        return {
+          value: $id,
+          $id,
+          label: userName,
+          batteryId,
+          userName,
+          totalSwapCount,
+        };
       })
     );
 
@@ -58,19 +68,39 @@ function SwapForm({ userDetails, getUser }) {
     );
   }, [activeUsers]);
 
+  // get and set the swap count of the user or the selected user
+  useEffect(() => {
+    if (userDetails) {
+      setSwapCount(userDetails?.totalSwapCount);
+    } else if (selectedUser) {
+      setSwapCount(selectedUser?.totalSwapCount);
+    }
+  }, [userDetails, selectedUser]);
+
   // handleSwap
   async function handleSwap(e) {
     e.preventDefault();
 
+    const userId = userDetails?.$id || selectedUser?.$id;
+    const userName = userDetails?.userName || selectedUser?.userName;
+    const oldBatteryId = userDetails?.batteryId || oldBatteryDetails?.$id;
+    const newBatteryId = selectedBattery?.$id;
+    const newBatRegNum = selectedBattery?.batRegNum;
+    const oldBatRegNum = oldBatteryDetails?.batRegNum;
+    const totalSwapCount = swapCount;
+
+    console.log(totalSwapCount);
+
     try {
       await dispatch(
         swapBattery({
-          userId: userDetails?.$id || selectedUser?.$id,
-          userName: userDetails?.userName || selectedUser?.userName,
-          oldBatteryId: userDetails?.batteryId || oldBatteryDetails?.$id,
-          newBatteryId: selectedBattery?.$id,
-          newBatRegNum: selectedBattery?.batRegNum,
-          oldBatRegNum: oldBatteryDetails?.batRegNum,
+          userId,
+          userName,
+          oldBatteryId,
+          newBatteryId,
+          oldBatRegNum,
+          newBatRegNum,
+          totalSwapCount,
         })
       ).unwrap();
 
@@ -104,9 +134,9 @@ function SwapForm({ userDetails, getUser }) {
     }
   }, []);
 
-  // if (isLoading) {
-  //   return <h2 className="bg-white rounded p-2 text-sm">Loading...</h2>;
-  // }
+  if (isLoading) {
+    return <h2 className="bg-white rounded p-2 text-sm">Loading...</h2>;
+  }
 
   if (swapLoading) {
     return <h2 className="bg-white rounded p-2 text-sm">Swap in process..</h2>;
@@ -141,7 +171,11 @@ function SwapForm({ userDetails, getUser }) {
             onChange={(user) => {
               // grab the batteryId from the selected input
               const { batteryId } = user;
-              setSelectedUser(user);
+              if (user) {
+                setSelectedUser(() => {
+                  return user;
+                });
+              }
 
               // run the getBatteryById only when the batteryId is present or else the swapForm component re-renders and the selected user also resets
               if (batteryId) {

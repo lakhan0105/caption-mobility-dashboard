@@ -7,7 +7,6 @@ import { getAllRecords } from "../features/record/recordSlice";
 
 import { FaArrowRightLong } from "react-icons/fa6";
 import { IoCalendar } from "react-icons/io5";
-import { TbClock } from "react-icons/tb";
 import { AiFillClockCircle } from "react-icons/ai";
 
 import { nanoid } from "nanoid";
@@ -50,6 +49,7 @@ function Swaps() {
             oldBatteryId,
             newBatteryId,
             swapDate,
+            totalSwapCount,
           } = record;
 
           return (
@@ -75,6 +75,9 @@ function Swaps() {
                       <FaArrowRightLong />
                     </span>
                     {newBatRegNum}
+
+                    {/* totalswapcount */}
+                    <h4 className="text-xs">(swap number {totalSwapCount})</h4>
                   </h4>
 
                   {/* date of swap information */}
