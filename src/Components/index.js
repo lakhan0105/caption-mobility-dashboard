@@ -3,6 +3,7 @@ import AuthBtn from "./AuthBtn";
 import BatteriesTable from "./BatteriesTable";
 import BikesTable from "./BikesTable";
 import GenericTable from "./GenericTable";
+import InfoCardOne from "./InfoCardOne";
 import InputRow from "./InputRow";
 import LogoutBtn from "./LogoutBtn";
 import Modal from "./Modal";
@@ -40,4 +41,5 @@ export {
   NewBatteryForm,
   SwapForm,
   PageHeader,
+  InfoCardOne,
 };

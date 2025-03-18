@@ -1,5 +1,6 @@
 import moment from "moment";
 import React from "react";
+import InfoCardRow from "../InfoCardRow";
 
 function UserFullDetails({ userFullDetailsState }) {
   const {
@@ -13,41 +14,24 @@ function UserFullDetails({ userFullDetailsState }) {
   } = userFullDetailsState;
 
   return (
-    <div className="text-sm px-4 py-1.5">
-      <div className="mb-5 flex justify-between items-start">
-        <div>
-          <h3 className="capitalize mb-0.5">User Id</h3>
-          <p className="text-xs text-zinc-500">{$id}</p>
-        </div>
-      </div>
+    <div className="px-6 py-7">
+      {/* USER ID */}
+      <InfoCardRow heading={"user id"} value={$id} />
 
-      <div className="mb-5 flex justify-between items-start">
-        <div>
-          <h3 className="capitalize mb-0.5">name</h3>
-          <p className="text-xs text-zinc-500">{userName}</p>
-        </div>
-      </div>
+      {/* USER NAME */}
+      <InfoCardRow heading={"name"} value={userName} />
 
-      <div className="mb-5 flex justify-between items-start">
-        <div>
-          <h3 className="capitalize mb-0.5">company</h3>
-          <p className="text-xs text-zinc-500">{userCompany}</p>
-        </div>
-      </div>
+      {/* COMPANY */}
+      <InfoCardRow heading={"company"} value={userCompany} />
 
-      <div className="mb-5 flex justify-between items-start">
-        <div>
-          <h3 className="capitalize mb-0.5">phone</h3>
-          <p className="text-xs text-zinc-500">{userPhone}</p>
-        </div>
-      </div>
+      {/* PHONE */}
+      <InfoCardRow heading={"phone"} value={userPhone} />
 
-      <div>
-        <h3 className="capitalize mb-0.5">Account created at</h3>
-        <p className="text-xs text-zinc-500">
-          {moment($createdAt).format("lll")}
-        </p>
-      </div>
+      {/* DATE OF ACCOUNT CREATION */}
+      <InfoCardRow
+        heading={"created at"}
+        value={moment($createdAt).format("lll")}
+      />
     </div>
   );
 }

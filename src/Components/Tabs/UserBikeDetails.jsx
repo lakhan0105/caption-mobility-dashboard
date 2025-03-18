@@ -6,22 +6,25 @@ import { FaPlus } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
 import { showModal } from "../../features/modal/modalSlice";
 import { getBikeById } from "../../features/bike/bikeSlice";
+import { MdOutlineElectricBike } from "react-icons/md";
+import { MdOutlinePedalBike } from "react-icons/md";
+import InfoCardOne from "../InfoCardOne";
+import InfoCardRow from "../InfoCardRow";
 
 function UserBikeDetails({ userBikeId, handleReturnBike }) {
   const dispatch = useDispatch();
 
+  // get the details of the bike -> stored in bikeById
   const { bikeById, isLoading } = useSelector((state) => state.bikeReducer);
 
+  // if the user has a bike, then get the details of that assigned bike when the page loads
   useEffect(() => {
     if (userBikeId) {
       dispatch(getBikeById(userBikeId));
     }
   }, [userBikeId]);
 
-  if (isLoading) {
-    return <h2>Loading...</h2>;
-  }
-
+  // if no bike was found associated to the user, then show the assign button
   if (!userBikeId) {
     return (
       <SimpleBtn
@@ -40,29 +43,29 @@ function UserBikeDetails({ userBikeId, handleReturnBike }) {
   }
 
   return (
-    <div className="text-sm px-4 py-1.5">
-      <div className="mb-5 flex justify-between items-start">
-        <div>
-          <h3 className="capitalize mb-0.5">bike Register Number</h3>
-          <p className="text-xs text-zinc-500">{bikeById?.bikeRegNum}</p>
-        </div>
+    <InfoCardOne headingIcon={<MdOutlinePedalBike />} heading={"bike details"}>
+      {/* BIKE REGISTER NUMBER */}
+      <InfoCardRow
+        heading={"bike register number"}
+        value={bikeById?.bikeRegNum}
+      />
 
-        {/* RETURN BIKE BUTTON */}
-        <SimpleBtn
-          name={"return"}
-          icon={<IoIosReturnLeft />}
-          extraStyles={"bg-red-500/90 border-none text-white"}
-          handleBtn={handleReturnBike}
-        />
-      </div>
+      {/* BIKE ASSIGNMENT DATE */}
+      <InfoCardRow
+        heading={"assigned on"}
+        value={moment(bikeById?.assignedAt).format("lll")}
+      />
 
-      <div>
-        <h3 className="capitalize mb-0.5">Assigned at</h3>
-        <p className="text-xs text-zinc-500">
-          {moment(bikeById?.assignedAt).format("lll")}
-        </p>
-      </div>
-    </div>
+      {/* BUTTON TO RETURN THE BIKE */}
+      <SimpleBtn
+        name={"Return"}
+        icon={<IoIosReturnLeft />}
+        extraStyles={
+          "border-[1.45px] border-red-400/50 font-semibold text-red-500 flex-row-reverse text-xs"
+        }
+        handleBtn={handleReturnBike}
+      />
+    </InfoCardOne>
   );
 }
 
