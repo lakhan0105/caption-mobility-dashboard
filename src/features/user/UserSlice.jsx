@@ -83,7 +83,10 @@ export const getUsersList = createAsyncThunk(
 // assign bike to user (accepts id, userStatus and bikeId)
 export const assignBikeToUser = createAsyncThunk(
   "user/assignBikeToUser",
-  async ({ selectedBikeId, selectedBatteryId, userId }, thunkAPI) => {
+  async (
+    { selectedBikeId, selectedBatteryId, userId, pendingAmount },
+    thunkAPI
+  ) => {
     try {
       const response = await databases.updateDocument(
         dbId,
@@ -94,6 +97,7 @@ export const assignBikeToUser = createAsyncThunk(
           bikeId: selectedBikeId,
           batteryId: selectedBatteryId,
           totalSwapCount: 0,
+          pendingAmount: Number(pendingAmount),
         }
       );
 
@@ -220,6 +224,22 @@ export const returnBikeFrmUser = createAsyncThunk(
   }
 );
 
+// updatePendingAmount
+export const updatePendingAmount = createAsyncThunk(
+  "user/updatePendingAmount",
+  async ({ userId, newPendingAmount }, thunkAPI) => {
+    try {
+      const resp = await databases.updateDocument(dbId, usersCollId, userId, {
+        pendingAmount: newPendingAmount,
+      });
+      return resp;
+    } catch (error) {
+      console.log(error);
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
 const userSlice = createSlice({
   name: "user",
   initialState,
@@ -325,6 +345,20 @@ const userSlice = createSlice({
       .addCase(getActiveUsers.rejected, (state, { payload }) => {
         state.isUserLoading = false;
         console.log("error in user/getActiveUsers");
+        console.log(payload);
+      })
+      .addCase(updatePendingAmount.pending, (state) => {
+        state.isUserLoading = true;
+        state.errMsg = null;
+      })
+      .addCase(updatePendingAmount.fulfilled, (state, action) => {
+        state.isUserLoading = false;
+        console.log("updated the payment details of the user");
+        toast.success("updated the pending amount details");
+      })
+      .addCase(updatePendingAmount.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/updatePendingAmount");
         console.log(payload);
       });
   },

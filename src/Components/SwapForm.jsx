@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import { closeModal } from "../features/modal/modalSlice";
 import { IoClose } from "react-icons/io5";
+import { RiErrorWarningLine, RiH4 } from "react-icons/ri";
 
 import {
   getAvailableBatteries,
@@ -47,7 +48,8 @@ function SwapForm({ userDetails, getUser }) {
     // options for active users
     setOptions(
       activeUsers?.map((user) => {
-        const { $id, userName, batteryId, totalSwapCount } = user;
+        const { $id, userName, batteryId, totalSwapCount, pendingAmount } =
+          user;
         return {
           value: $id,
           $id,
@@ -55,6 +57,7 @@ function SwapForm({ userDetails, getUser }) {
           batteryId,
           userName,
           totalSwapCount,
+          pendingAmount,
         };
       })
     );
@@ -154,13 +157,23 @@ function SwapForm({ userDetails, getUser }) {
         <IoClose />
       </button>
 
-      <h3 className="font-semibold text-xl mb-5">SWAP BATTERY</h3>
+      <h3 className="font-semibold text-xl">SWAP BATTERY</h3>
 
       {/* SELECT USER */}
       {/* show this only when the userDetails is not passed as props */}
       {/* this el can only be shown anywhere except the userDetails page */}
       {!userDetails && (
         <div className="leading-loose">
+          {/* show the pending amount from the selected user */}
+          {selectedUser?.pendingAmount > 0 && (
+            <div className="text-red-500 font-medium text-xs flex items-center gap-1 mb-5">
+              <span className="text-[13px]">
+                <RiErrorWarningLine />
+              </span>
+              <h4>pending amount: ₹{selectedUser?.pendingAmount}</h4>
+            </div>
+          )}
+
           <label htmlFor="bike">Select user</label>
 
           <Select
@@ -173,6 +186,7 @@ function SwapForm({ userDetails, getUser }) {
               const { batteryId } = user;
               if (user) {
                 setSelectedUser(() => {
+                  console.log(user);
                   return user;
                 });
               }
@@ -186,11 +200,22 @@ function SwapForm({ userDetails, getUser }) {
         </div>
       )}
 
+      {/* WITH USER DETAILS */}
       {/* if userDetails is passed show the name of that user in swapform */}
       {userDetails && <h3 className="font-medium">{userDetails?.userName}</h3>}
 
       {/* SELECT INPUT FOR BATTERY  */}
       <div className="leading-loose">
+        {/* check and show the pending payment details of the user*/}
+        {userDetails?.pendingAmount > 0 && (
+          <div className="text-red-500 font-medium text-xs flex items-center gap-1 mb-5">
+            <span className="text-[13px]">
+              <RiErrorWarningLine />
+            </span>
+            <h4>pending amount: ₹{userDetails?.pendingAmount}</h4>
+          </div>
+        )}
+
         <label htmlFor="bike">Select Battery</label>
         <Select
           options={batteryOptions}

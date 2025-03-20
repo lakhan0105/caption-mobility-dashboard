@@ -32,6 +32,7 @@ function UsersTable({ data }) {
             userPhone,
             userStatus,
             totalSwapCount,
+            pendingAmount,
           } = item;
 
           return (
@@ -44,21 +45,31 @@ function UsersTable({ data }) {
 
                 {/* USER NAME/BASIC DETAILS */}
                 {isMobile ? (
-                  <div className="md:hidden flex items-cente gap-2">
+                  <div className="md:hidden flex  gap-2">
                     <div>
                       <h2 className="font-medium text-md capitalize">
                         {userName}
                       </h2>
-                      {/* <p className="text-xs font-light">{userPhone}</p> */}
-                      {totalSwapCount > 0 ? (
-                        <p className="text-[10px]">
-                          {totalSwapCount} {""}
-                          {totalSwapCount <= 1 ? "swap" : "swaps"} with current
-                          bike
-                        </p>
-                      ) : (
-                        <p className="text-[10px] font-light">{userPhone}</p>
-                      )}
+
+                      <div className="leading-4 mt-0.5">
+                        {/* total swap count for the current bike */}
+                        {totalSwapCount > 0 ? (
+                          <p className="text-[10px]">
+                            {totalSwapCount} {""}
+                            {totalSwapCount <= 1 ? "swap" : "swaps"} with
+                            current bike
+                          </p>
+                        ) : (
+                          <p className="text-[10px]"></p>
+                        )}
+
+                        {/* pendingAmount if present */}
+                        {pendingAmount > 0 && (
+                          <p className="text-[10px] font-medium text-red-700">
+                            pending: ₹{pendingAmount}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : (

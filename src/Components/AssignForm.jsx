@@ -6,11 +6,12 @@ import SubmitBtn from "./Buttons/SubmitBtn";
 import { useParams } from "react-router";
 import { assignBikeToUser } from "../features/user/UserSlice";
 import { getAvailableBatteries } from "../features/battery/batterySlice";
+import InputRow from "./InputRow";
+import toast from "react-hot-toast";
 
-function AssignForm({ getUser }) {
+function AssignForm({ getUser, oldPendingAmount }) {
   const dispatch = useDispatch();
   const userId = useParams().id;
-  console.log(userId);
 
   useEffect(() => {
     dispatch(getAvailableBikes());
@@ -31,6 +32,7 @@ function AssignForm({ getUser }) {
     userId: userId,
     selectedBikeId: null,
     selectedBatteryId: null,
+    pendingAmount: 0,
   });
 
   // handleChange (runs when the select bike form is modified)
@@ -48,8 +50,12 @@ function AssignForm({ getUser }) {
     e.preventDefault();
 
     // check if the bike is selected by the user
-    if (!assignmentData.selectedBikeId || !assignmentData.selectedBatteryId) {
-      alert("please select bike & battery");
+    if (
+      !assignmentData.selectedBikeId ||
+      !assignmentData.selectedBatteryId ||
+      !assignmentData?.pendingAmount
+    ) {
+      toast.error("please fill all the details");
       return;
     }
 
@@ -76,7 +82,7 @@ function AssignForm({ getUser }) {
   }
 
   return (
-    <form className="bg-white w-full max-w-[400px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative">
+    <form className="bg-white w-full max-w-[400px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative ">
       {/* CLOSE MODAL BUTTON */}
       <button
         className="absolute right-4 top-4 cursor-pointer"
@@ -132,6 +138,19 @@ function AssignForm({ getUser }) {
           );
         })}
       </select>
+
+      {/* PENDING PAYMENT INPUT */}
+      <InputRow
+        name={"pendingAmount"}
+        type={"number"}
+        label={"Pending Amount"}
+        handleChange={handleChange}
+        value={assignmentData.pendingAmount}
+      >
+        <p className="text-xs text-red-500 font-medium mb-1">
+          old pending amount: ₹ {oldPendingAmount}
+        </p>
+      </InputRow>
 
       <SubmitBtn text={"Assign bike"} handleSubmit={handleAssignBike} />
     </form>

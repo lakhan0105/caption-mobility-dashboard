@@ -3,6 +3,7 @@ import UserBikeDetails from "./UserBikeDetails";
 import UserBatteryDetails from "./UserBatteryDetails";
 import UserFullDetails from "./UserFullDetails";
 import UserRentalDetails from "./UserRentalDetails";
+import UserPaymentDetails from "./UserPaymentDetails";
 
 function Tabs({ userDetails, handleReturnBike }) {
   const {
@@ -10,12 +11,14 @@ function Tabs({ userDetails, handleReturnBike }) {
     bikeId: userBikeId,
     batteryId: userBatteryId,
     userStatus,
+    pendingAmount,
   } = userDetails;
 
   // tab Headings Data
   const tabHeadingsData = [
     { id: 1, name: "user-rental", label: "rental" },
-    { id: 2, name: "user-full-details", label: "full details" },
+    { id: 2, name: "user-pending-payment", label: "payment" },
+    { id: 3, name: "user-full-details", label: "full details" },
   ];
 
   // state to keep track of active tab
@@ -34,7 +37,7 @@ function Tabs({ userDetails, handleReturnBike }) {
       {/* TAB HEADINGS */}
       <div
         className="h-[50px] flex text-sm pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37]
- px-5 text-white"
+ px-5 text-white mb-2"
       >
         {tabHeadingsData.map((heading) => {
           const { id, name, label } = heading;
@@ -60,6 +63,11 @@ function Tabs({ userDetails, handleReturnBike }) {
           userBikeId={userBikeId}
           handleReturnBike={handleReturnBike}
         />
+      )}
+
+      {/* USER PAYMENT DETAILS TAB */}
+      {activeTab === "user-pending-payment" && (
+        <UserPaymentDetails pendingAmount={pendingAmount} />
       )}
 
       {/* USER FULL DETAILS */}
