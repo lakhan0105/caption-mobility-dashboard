@@ -2,8 +2,10 @@ import AssignForm from "./AssignForm";
 import AuthBtn from "./AuthBtn";
 import BatteriesTable from "./BatteriesTable";
 import BikesTable from "./BikesTable";
+import EditPaymentForm from "./EditPaymentForm";
 import GenericTable from "./GenericTable";
 import InfoCardOne from "./InfoCardOne";
+import InfoCardRowTwo from "./InfoCardRowTwo";
 import InputRow from "./InputRow";
 import LogoutBtn from "./LogoutBtn";
 import Modal from "./Modal";
@@ -42,4 +44,6 @@ export {
   SwapForm,
   PageHeader,
   InfoCardOne,
+  InfoCardRowTwo,
+  EditPaymentForm,
 };

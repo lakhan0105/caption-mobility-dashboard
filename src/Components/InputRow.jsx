@@ -1,11 +1,21 @@
 import React from "react";
 
-function InputRow({ name, type, label, handleChange, value, required }) {
+function InputRow({
+  name,
+  type,
+  label,
+  handleChange,
+  value,
+  required,
+  children,
+}) {
   return (
     <div className="flex flex-col items-start mb-5">
       <label htmlFor={name} className="capitalize mb-2">
         {label}
       </label>
+
+      {children}
 
       <input
         type={type}

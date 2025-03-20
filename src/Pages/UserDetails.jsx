@@ -5,12 +5,15 @@ import { FaPhoneAlt } from "react-icons/fa";
 import { FaRegMessage } from "react-icons/fa6";
 import { databases } from "../appwrite";
 import SimpleBtn from "../Components/Buttons/SimpleBtn";
-import { AssignForm, Modal, SwapForm } from "../Components";
+import { AssignForm, EditPaymentForm, Modal, SwapForm } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
-import { returnBikeFrmUser } from "../features/user/UserSlice";
+import {
+  returnBikeFrmUser,
+  updatePendingAmount,
+} from "../features/user/UserSlice";
 import Tabs from "../Components/Tabs/Tabs";
 import { Avatar } from "@mui/material";
-import { deepOrange, deepPurple } from "@mui/material/colors";
+import { deepPurple } from "@mui/material/colors";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -21,6 +24,12 @@ function UserDetails() {
   const [userDetails, setUserDetails] = useState();
 
   const dispatch = useDispatch();
+
+  const { isAssignForm, isSwapForm, isPendingPayment, isLoading } = useSelector(
+    (state) => {
+      return state.modalReducer;
+    }
+  );
 
   // function to fetch the user (single user)
   async function getUser() {
@@ -117,11 +126,26 @@ function UserDetails() {
 
           {/* If bike is not assigned then show AssignForm or else show the swap form */}
           <Modal>
-            {!userDetails?.bikeId ? (
-              <AssignForm getUser={getUser} />
-            ) : (
+            {isAssignForm && (
+              <AssignForm
+                getUser={getUser}
+                oldPendingAmount={userDetails?.pendingAmount}
+              />
+            )}
+
+            {isSwapForm && (
               <SwapForm userDetails={userDetails} getUser={getUser} />
             )}
+
+            {isPendingPayment && (
+              <EditPaymentForm
+                userId={paramId}
+                pendingAmount={userDetails?.pendingAmount}
+                getUser={getUser}
+              />
+            )}
+
+            {isLoading && <h2 className="text-white">Loading...</h2>}
           </Modal>
         </div>
       </section>

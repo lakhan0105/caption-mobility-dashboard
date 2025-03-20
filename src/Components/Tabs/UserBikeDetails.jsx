@@ -4,12 +4,17 @@ import { IoIosReturnLeft } from "react-icons/io";
 import moment from "moment";
 import { FaPlus } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
-import { showModal } from "../../features/modal/modalSlice";
+import {
+  hideLoader,
+  showAssignForm,
+  showLoader,
+  showModal,
+} from "../../features/modal/modalSlice";
 import { getBikeById } from "../../features/bike/bikeSlice";
-import { MdOutlineElectricBike } from "react-icons/md";
 import { MdOutlinePedalBike } from "react-icons/md";
 import InfoCardOne from "../InfoCardOne";
 import InfoCardRow from "../InfoCardRow";
+import InfoCardRowTwo from "../InfoCardRowTwo";
 
 function UserBikeDetails({ userBikeId, handleReturnBike }) {
   const dispatch = useDispatch();
@@ -24,46 +29,55 @@ function UserBikeDetails({ userBikeId, handleReturnBike }) {
     }
   }, [userBikeId]);
 
-  // if no bike was found associated to the user, then show the assign button
-  if (!userBikeId) {
-    return (
-      <SimpleBtn
-        name={"Assign"}
-        icon={<FaPlus />}
-        extraStyles={"py-1.5 text-xs"}
-        handleBtn={() => {
-          dispatch(showModal());
-        }}
-      />
-    );
+  if (isLoading) {
+    return <h2 className="p-2 text-center">Loading bike details...</h2>;
   }
 
-  if (isLoading) {
-    return <h2 className="p-2">Loading...</h2>;
+  if (!userBikeId) {
+    return (
+      <InfoCardOne
+        headingIcon={<MdOutlinePedalBike />}
+        heading={"bike details"}
+      >
+        <p className="text-xs mb-3 text-zinc-700/80">
+          No bike and battery assigned to the user yet
+        </p>
+
+        <SimpleBtn
+          name={"Assign"}
+          icon={<FaPlus />}
+          extraStyles={"py-1.5 text-xs"}
+          handleBtn={() => {
+            dispatch(showModal());
+            dispatch(showAssignForm());
+          }}
+        />
+      </InfoCardOne>
+    );
   }
 
   return (
     <InfoCardOne headingIcon={<MdOutlinePedalBike />} heading={"bike details"}>
       {/* BIKE REGISTER NUMBER */}
-      <InfoCardRow
+      <InfoCardRowTwo
         heading={"bike register number"}
         value={bikeById?.bikeRegNum}
-      />
+      >
+        {/* button to return the bike */}
+        <SimpleBtn
+          name={"Return"}
+          icon={<IoIosReturnLeft />}
+          extraStyles={
+            "border-[1.45px] border-red-400/50 font-semibold text-red-500 text-xs"
+          }
+          handleBtn={handleReturnBike}
+        />
+      </InfoCardRowTwo>
 
       {/* BIKE ASSIGNMENT DATE */}
       <InfoCardRow
         heading={"assigned on"}
         value={moment(bikeById?.assignedAt).format("lll")}
-      />
-
-      {/* BUTTON TO RETURN THE BIKE */}
-      <SimpleBtn
-        name={"Return"}
-        icon={<IoIosReturnLeft />}
-        extraStyles={
-          "border-[1.45px] border-red-400/50 font-semibold text-red-500 flex-row-reverse text-xs"
-        }
-        handleBtn={handleReturnBike}
       />
     </InfoCardOne>
   );
