@@ -6,6 +6,7 @@ import deviceReducer from "./features/device/deviceSlice";
 import bikeReducer from "./features/bike/bikeSlice";
 import batteryReducer from "./features/battery/batterySlice";
 import recordReducer from "./features/record/recordSlice";
+import companyReducer from "./features/company/companySlice";
 
 const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ const store = configureStore({
     bikeReducer,
     batteryReducer,
     recordReducer,
+    companyReducer,
   },
 });
 

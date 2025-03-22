@@ -80,6 +80,47 @@ export const getUsersList = createAsyncThunk(
   }
 );
 
+// get getUserBySearch
+export const getUserBySearch = createAsyncThunk(
+  "user/getUserBySearch",
+  async (inputText, thunkAPI) => {
+    try {
+      const resp = await databases.listDocuments(dbId, usersCollId, [
+        Query.contains("userName", inputText),
+      ]);
+      console.log(resp);
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+// get user by filter (rusn when the filter btns are clicked)
+export const getUserByFilter = createAsyncThunk(
+  "user/getUserByFilter",
+  async ({ attributeName, attributeValue }, thunkAPI) => {
+    console.log(attributeName, attributeValue);
+
+    let query;
+    if (attributeName === "userStatus") {
+      query = [Query.equal(`${attributeName}`, true)];
+    } else if (attributeName === "pendingAmount") {
+      query = [Query.greaterThan("pendingAmount", 0)];
+    } else if (attributeName === "userCompany") {
+      query = [Query.contains("userCompany", attributeValue)];
+    }
+
+    try {
+      const resp = await databases.listDocuments(dbId, usersCollId, query);
+      console.log(resp);
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
 // assign bike to user (accepts id, userStatus and bikeId)
 export const assignBikeToUser = createAsyncThunk(
   "user/assignBikeToUser",
@@ -359,6 +400,32 @@ const userSlice = createSlice({
       .addCase(updatePendingAmount.rejected, (state, { payload }) => {
         state.isUserLoading = false;
         console.log("error in user/updatePendingAmount");
+        console.log(payload);
+      })
+      .addCase(getUserBySearch.pending, (state) => {
+        state.isUserLoading = true;
+        state.errMsg = null;
+      })
+      .addCase(getUserBySearch.fulfilled, (state, action) => {
+        state.isUserLoading = false;
+        state.usersList = action.payload.documents;
+      })
+      .addCase(getUserBySearch.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/getUserBySearch");
+        console.log(payload);
+      })
+      .addCase(getUserByFilter.pending, (state) => {
+        state.isUserLoading = true;
+        state.errMsg = null;
+      })
+      .addCase(getUserByFilter.fulfilled, (state, action) => {
+        state.isUserLoading = false;
+        state.usersList = action.payload.documents;
+      })
+      .addCase(getUserByFilter.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/getUserBySearch");
         console.log(payload);
       });
   },

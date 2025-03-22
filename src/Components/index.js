@@ -3,6 +3,7 @@ import AuthBtn from "./AuthBtn";
 import BatteriesTable from "./BatteriesTable";
 import BikesTable from "./BikesTable";
 import EditPaymentForm from "./EditPaymentForm";
+import Filters from "./Filters";
 import GenericTable from "./GenericTable";
 import InfoCardOne from "./InfoCardOne";
 import InfoCardRowTwo from "./InfoCardRowTwo";
@@ -14,6 +15,7 @@ import NewBatteryForm from "./NewBatteryForm";
 import NewBikeForm from "./NewBikeForm";
 import PageHeader from "./PageHeader";
 import ProfileRow from "./ProfileRow";
+import SearchBar from "./SearchBar";
 import SwapForm from "./SwapForm";
 import TableHeader from "./TableHeader";
 import TableRow from "./TableRow";
@@ -46,4 +48,6 @@ export {
   InfoCardOne,
   InfoCardRowTwo,
   EditPaymentForm,
+  SearchBar,
+  Filters,
 };

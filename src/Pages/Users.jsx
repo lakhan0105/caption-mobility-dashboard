@@ -1,19 +1,20 @@
 import React, { useEffect } from "react";
 import {
+  Filters,
   Modal,
   PageHeader,
-  UserCard,
+  SearchBar,
   UserForm,
   UsersTable,
 } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
-import { getUsersList } from "../features/user/UserSlice";
+import { getUserBySearch, getUsersList } from "../features/user/UserSlice";
 import { showModal } from "../features/modal/modalSlice";
 
-import { FaUsers } from "react-icons/fa";
-
 function Users() {
-  const { usersList } = useSelector((state) => state.userReducer);
+  const { usersList, isUserLoading } = useSelector(
+    (state) => state.userReducer
+  );
 
   const dispatch = useDispatch();
 
@@ -30,22 +31,35 @@ function Users() {
 
   // open the modal when clicked on add new user
   function handleNewUser() {
+    // modal has the UserForm that adds a new user
     dispatch(showModal());
   }
 
+  // handleUsersSearch
+  function handleUsersSearch(inputText) {
+    dispatch(getUserBySearch(inputText));
+  }
+
   return (
-    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
-      <div className="max-w-[900px]">
+    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] ">
+      <div className="max-w-[900px] overflow-hidden">
         {/* PAGE TOP SECTION*/}
-        <PageHeader
-          heading={"users list"}
-          btnName={"+ add new user"}
-          handleFunction={handleNewUser}
-          icon={<FaUsers />}
-        />
+        <PageHeader heading={"users list"} handleFunction={handleNewUser}>
+          <SearchBar
+            handleSearch={handleUsersSearch}
+            placeHolder={"find users"}
+          />
+
+          {/* add filter buttons here */}
+          <Filters />
+        </PageHeader>
 
         {/* users table */}
-        {usersList && <UsersTable data={usersList} />}
+        {isUserLoading ? (
+          <h2 className="text-center">Loading...</h2>
+        ) : (
+          <UsersTable data={usersList} />
+        )}
 
         <Modal>
           <UserForm />
