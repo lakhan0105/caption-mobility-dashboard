@@ -7,6 +7,7 @@ import { createUser, getUsersList } from "../features/user/UserSlice";
 import { ID } from "appwrite";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import toast from "react-hot-toast";
+import { addCompanyIfNew } from "../features/company/companySlice";
 
 function UserForm() {
   const [userInputState, setUserInputState] = useState({
@@ -37,11 +38,17 @@ function UserForm() {
     e.preventDefault();
     const docID = ID.unique();
     dispatch(createUser({ docID, ...userInputState }))
-      .then(() => {
-        setUserInputState({ userName: "", userPhone: "", userCompany: "" });
-        dispatch(closeModal());
-        toast.success("user created successfully");
-        dispatch(getUsersList());
+      .then((resp) => {
+        if (createUser.fulfilled.match(resp)) {
+          // if the user has been created successfully then add a company name (if new)
+
+          dispatch(addCompanyIfNew(userInputState.userCompany.toLowerCase()));
+
+          setUserInputState({ userName: "", userPhone: "", userCompany: "" });
+          dispatch(closeModal());
+          toast.success("user created successfully");
+          dispatch(getUsersList());
+        }
       })
       .catch((error) => {
         alert("Error in creating the user!", error);

@@ -19,6 +19,8 @@ function UsersTable({ data }) {
 
   return (
     <GenericTable>
+      {/* SEARCH BAR */}
+
       {/* TABLE HEADER */}
       <TableHeader data={userTableHeadings} cols={userCols} />
 
