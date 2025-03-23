@@ -26,7 +26,7 @@ function UsersTable({ data }) {
 
       {/* TABLE DATA */}
       <div>
-        {data.map((item, index) => {
+        {data?.map((item, index) => {
           const {
             $id,
             userName,

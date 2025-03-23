@@ -174,6 +174,8 @@ function SwapForm({ userDetails, getUser }) {
             </div>
           )}
 
+          {/* INPUT TO SELECT THE USER */}
+
           <label htmlFor="bike">Select user</label>
 
           <Select
@@ -185,10 +187,7 @@ function SwapForm({ userDetails, getUser }) {
               // grab the batteryId from the selected input
               const { batteryId } = user;
               if (user) {
-                setSelectedUser(() => {
-                  console.log(user);
-                  return user;
-                });
+                setSelectedUser(user);
               }
 
               // run the getBatteryById only when the batteryId is present or else the swapForm component re-renders and the selected user also resets

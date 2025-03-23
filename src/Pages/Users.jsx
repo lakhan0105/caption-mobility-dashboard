@@ -25,9 +25,9 @@ function Users() {
   }, []);
 
   // if users length is 0
-  if (usersList?.length === 0) {
-    return <h2 className="ml-[300px] w-[calc(100%-300px)]">No users found!</h2>;
-  }
+  // if (usersList?.length === 0) {
+  //   return <h2 className="ml-[300px] w-[calc(100%-300px)]">No users found!</h2>;
+  // }
 
   // open the modal when clicked on add new user
   function handleNewUser() {
