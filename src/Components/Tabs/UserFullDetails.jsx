@@ -11,6 +11,7 @@ function UserFullDetails({ userFullDetailsState }) {
     $createdAt,
     userStatus,
     userNotes,
+    userLocation,
   } = userFullDetailsState;
 
   return (
@@ -26,6 +27,9 @@ function UserFullDetails({ userFullDetailsState }) {
 
       {/* PHONE */}
       <InfoCardRow heading={"phone"} value={userPhone} />
+
+      {/* LOCATION */}
+      <InfoCardRow heading={"location"} value={userLocation} />
 
       {/* DATE OF ACCOUNT CREATION */}
       <InfoCardRow

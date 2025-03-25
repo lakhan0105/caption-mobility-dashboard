@@ -14,6 +14,7 @@ function UserForm() {
     userName: "",
     userPhone: "",
     userCompany: "",
+    userLocation: "",
   });
 
   const dispatch = useDispatch();
@@ -37,7 +38,18 @@ function UserForm() {
   function handleAddUser(e) {
     e.preventDefault();
     const docID = ID.unique();
-    dispatch(createUser({ docID, ...userInputState }))
+
+    const userData = {
+      docID,
+      userName: userInputState.userName,
+      userPhone: userInputState.userPhone,
+      userCompany: userInputState.userCompany,
+      userLocation: userInputState.userLocation,
+    };
+
+    console.log(userData);
+
+    dispatch(createUser(userData))
       .then((resp) => {
         if (createUser.fulfilled.match(resp)) {
           // if the user has been created successfully then add a company name (if new)
@@ -92,6 +104,15 @@ function UserForm() {
         required={true}
         handleChange={handleChange}
         value={userInputState.userCompany}
+      />
+
+      {/* USER LOCATION */}
+      <InputRow
+        name={"userLocation"}
+        type={"text"}
+        label={"Location"}
+        handleChange={handleChange}
+        value={userInputState.userLocation}
       />
 
       <SubmitBtn text={"create a new user"} />
