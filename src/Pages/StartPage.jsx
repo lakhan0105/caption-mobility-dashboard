@@ -4,6 +4,8 @@ import { useDispatch } from "react-redux";
 import { setIsSignup } from "../features/auth/AuthSlice";
 import { useNavigate } from "react-router";
 
+import logo from "../assets/logo.png";
+
 function StartPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -16,12 +18,14 @@ function StartPage() {
 
   return (
     <section className="w-full h-screen flex flex-col items-center justify-center bg-[#F5F5DC]">
-      <h2 className="text-4xl font-bold mb-8 text-[#3E2723]">
-        Welcome to Caption Mobility
-      </h2>
+      <img src={logo} className="w-[220px] rounded-[50%] " alt="not found" />
+
+      {/* <h2 className="text-4xl font-bold mt-4 mb-3 text-[#3E2723] text-center">
+        Welcome
+      </h2> */}
 
       {/* buttons container */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 mt-6">
         <AuthBtn
           text={"login"}
           name={"login"}

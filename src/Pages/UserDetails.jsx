@@ -109,12 +109,21 @@ function UserDetails() {
                   <SimpleBtn
                     name={"call"}
                     icon={<FaPhoneAlt />}
-                    extraStyles={"capitalize text-xs border-white/40"}
+                    extraStyles={
+                      "capitalize text-xs border-white/30 rounded-2xl"
+                    }
+                    userPhone={userDetails?.userPhone}
+                    action={"call"}
                   />
+
                   <SimpleBtn
                     name={"messsage"}
                     icon={<FaRegMessage />}
-                    extraStyles={"capitalize text-xs border-white/40"}
+                    extraStyles={
+                      "capitalize text-xs border-white/30 rounded-2xl"
+                    }
+                    userPhone={userDetails?.userPhone}
+                    action={"message"}
                   />
                 </div>
               </div>
