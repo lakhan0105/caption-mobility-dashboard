@@ -23,7 +23,7 @@ export const createUser = createAsyncThunk(
   "user/createUser",
   async (data, thunkAPI) => {
     console.log(data);
-    const { docID, userName, userPhone, userCompany } = data;
+    const { docID, userName, userPhone, userCompany, userLocation } = data;
 
     // create a permission so that only the admin can createUser
     const permissions = [
@@ -41,6 +41,7 @@ export const createUser = createAsyncThunk(
           userName,
           userPhone,
           userCompany,
+          userLocation,
         },
         permissions
       );
