@@ -26,7 +26,7 @@ function Filters() {
   useEffect(() => {
     if (companyNames) {
       setBtnNames((prev) => {
-        return [...prev, ...companyNames];
+        return [...btnNames, ...companyNames];
       });
     }
   }, [companyNames]);
@@ -62,8 +62,8 @@ function Filters() {
   }
 
   return (
-    <div className="max-w-[475px] mt-7 overflow-x-scroll no-scrollbar">
-      <div className="text-xs flex gap-4 w-full">
+    <div className="borde max-w-[475px] mt-7 overflow-x-scroll no-scrollbar">
+      <div className="text-xs w-max overflow-x-scroll flex gap-4 whitespace-nowrap">
         {btnNames &&
           btnNames?.map((btnName, index) => {
             return (
