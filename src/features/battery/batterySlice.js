@@ -61,9 +61,6 @@ export const addNewBattery = createAsyncThunk(
         data
       );
 
-      if (response) {
-        alert("added new battery successfully!");
-      }
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -226,10 +223,16 @@ const batterySlice = createSlice({
       })
       .addCase(addNewBattery.fulfilled, (state, { payload }) => {
         state.isLoading = false;
+        toast.success("add new battery successfully!");
       })
       .addCase(addNewBattery.rejected, (state, { payload }) => {
         state.isLoading = false;
-        alert("error in addNewBattery");
+
+        if (payload.code === 409) {
+          toast.error("Battery with same batRegNum/id is already present!");
+        }
+
+        console.log("error in addNewBattery");
         console.log(payload);
       })
       .addCase(getAvailableBatteries.pending, (state, action) => {

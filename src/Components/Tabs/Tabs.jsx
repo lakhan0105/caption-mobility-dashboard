@@ -10,6 +10,8 @@ function Tabs({ userDetails, handleReturnBike }) {
     batteryId: userBatteryId,
     userStatus,
     pendingAmount,
+    paidAmount,
+    depositAmount,
     chargerStatus,
   } = userDetails;
 
@@ -68,7 +70,11 @@ function Tabs({ userDetails, handleReturnBike }) {
 
       {/* USER PAYMENT DETAILS TAB */}
       {activeTab === "user-pending-payment" && (
-        <UserPaymentDetails pendingAmount={pendingAmount} />
+        <UserPaymentDetails
+          paidAmount={paidAmount}
+          depositAmount={depositAmount}
+          pendingAmount={pendingAmount}
+        />
       )}
 
       {/* USER FULL DETAILS */}

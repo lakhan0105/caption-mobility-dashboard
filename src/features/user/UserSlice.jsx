@@ -23,7 +23,14 @@ export const createUser = createAsyncThunk(
   "user/createUser",
   async (data, thunkAPI) => {
     console.log(data);
-    const { docID, userName, userPhone, userCompany, userLocation } = data;
+    const {
+      docID,
+      userName,
+      userRegisterId,
+      userPhone,
+      userCompany,
+      userLocation,
+    } = data;
 
     // create a permission so that only the admin can createUser
     const permissions = [
@@ -39,6 +46,7 @@ export const createUser = createAsyncThunk(
         docID,
         {
           userName,
+          userRegisterId,
           userPhone,
           userCompany,
           userLocation,
@@ -46,9 +54,10 @@ export const createUser = createAsyncThunk(
         permissions
       );
 
+      console.log(resp);
       return resp;
     } catch (error) {
-      console.log(error);
+      console.log(error.response.data);
       return thunkAPI.rejectWithValue(error);
     }
   }
@@ -126,10 +135,19 @@ export const getUserByFilter = createAsyncThunk(
 export const assignBikeToUser = createAsyncThunk(
   "user/assignBikeToUser",
   async (
-    { selectedBikeId, selectedBatteryId, userId, pendingAmount, chargerStatus },
+    {
+      selectedBikeId,
+      selectedBatteryId,
+      userId,
+      pendingAmount,
+      paidAmount,
+      depositAmount,
+      chargerStatus,
+    },
     thunkAPI
   ) => {
     try {
+      // update the user details
       const response = await databases.updateDocument(
         dbId,
         usersCollId,
@@ -140,6 +158,8 @@ export const assignBikeToUser = createAsyncThunk(
           batteryId: selectedBatteryId,
           totalSwapCount: 0,
           pendingAmount: Number(pendingAmount),
+          depositAmount: Number(depositAmount),
+          paidAmount: Number(paidAmount),
           chargerStatus,
         }
       );
@@ -268,12 +288,13 @@ export const returnBikeFrmUser = createAsyncThunk(
 );
 
 // updatePendingAmount
-export const updatePendingAmount = createAsyncThunk(
-  "user/updatePendingAmount",
-  async ({ userId, newPendingAmount }, thunkAPI) => {
+export const updatePayment = createAsyncThunk(
+  "user/updatePayment",
+  async ({ userId, data }, thunkAPI) => {
+    console.log(data);
     try {
       const resp = await databases.updateDocument(dbId, usersCollId, userId, {
-        pendingAmount: newPendingAmount,
+        ...data,
       });
       return resp;
     } catch (error) {
@@ -342,7 +363,11 @@ const userSlice = createSlice({
       .addCase(createUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
         console.log("error in user/createUser");
-        alert(payload.response.message);
+
+        if (payload.code === 409) {
+          toast.error("user with same name/registerId already present!");
+        }
+
         state.errMsg = payload.response.message || "could not create a user";
       })
       .addCase(assignBikeToUser.pending, (state) => {
@@ -403,18 +428,18 @@ const userSlice = createSlice({
         console.log("error in user/getActiveUsers");
         console.log(payload);
       })
-      .addCase(updatePendingAmount.pending, (state) => {
+      .addCase(updatePayment.pending, (state) => {
         state.isUserLoading = true;
         state.errMsg = null;
       })
-      .addCase(updatePendingAmount.fulfilled, (state, action) => {
+      .addCase(updatePayment.fulfilled, (state, action) => {
         state.isUserLoading = false;
         console.log("updated the payment details of the user");
         toast.success("updated the pending amount details");
       })
-      .addCase(updatePendingAmount.rejected, (state, { payload }) => {
+      .addCase(updatePayment.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/updatePendingAmount");
+        console.log("error in user/updatePayment");
         console.log(payload);
       })
       .addCase(getUserBySearch.pending, (state) => {

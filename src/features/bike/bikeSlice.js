@@ -95,7 +95,6 @@ export const updateBike = createAsyncThunk(
 export const addBike = createAsyncThunk(
   "bike/addBike",
   async (data, thunkAPI) => {
-    console.log(data);
     try {
       const resp = await databases.createDocument(
         dbId,
@@ -170,10 +169,16 @@ const bikeSlice = createSlice({
       })
       .addCase(addBike.fulfilled, (state, { payload }) => {
         state.isLoading = false;
+        toast.success("added new bike successfully!");
       })
       .addCase(addBike.rejected, (state, { payload }) => {
         state.isLoading = false;
-        alert("error in addNewBike");
+        console.log(payload.code);
+
+        if (payload.code === 409) {
+          toast.error("bike with same id is already present!");
+        }
+
         console.log(payload);
       });
   },

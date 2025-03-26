@@ -33,6 +33,8 @@ function AssignForm({ getUser, oldPendingAmount }) {
     selectedBikeId: null,
     selectedBatteryId: null,
     pendingAmount: 0,
+    paidAmount: 0,
+    depositAmount: 0,
     chargerStatus: false,
   });
 
@@ -157,7 +159,29 @@ function AssignForm({ getUser, oldPendingAmount }) {
         <label htmlFor="chargerStatus">Charger provided</label>
       </div>
 
-      {/* PENDING PAYMENT INPUT */}
+      {/* INPUT FOR DEPOSIT AMOUNT */}
+      <div>
+        <InputRow
+          name={"depositAmount"}
+          type={"number"}
+          label={"Deposit Amount"}
+          handleChange={handleChange}
+          value={assignmentData.depositAmount}
+        />
+      </div>
+
+      {/* INPUT FOR PAID AMOUNT */}
+      <div>
+        <InputRow
+          name={"paidAmount"}
+          type={"number"}
+          label={"Paid Amount"}
+          handleChange={handleChange}
+          value={assignmentData.paidAmount}
+        />
+      </div>
+
+      {/* INPUT FOR PENDING AMOUNT */}
       <div>
         <InputRow
           name={"pendingAmount"}

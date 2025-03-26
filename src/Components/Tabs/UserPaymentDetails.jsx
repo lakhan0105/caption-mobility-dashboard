@@ -11,8 +11,9 @@ import {
   showEditPaymentModal,
   showModal,
 } from "../../features/modal/modalSlice";
+import InfoCardRow from "../InfoCardRow";
 
-function UserPaymentDetails({ pendingAmount }) {
+function UserPaymentDetails({ pendingAmount, paidAmount, depositAmount }) {
   const dispatch = useDispatch();
 
   // show the modal to edit the payment details
@@ -22,20 +23,27 @@ function UserPaymentDetails({ pendingAmount }) {
   }
 
   return (
-    <InfoCardOne headingIcon={<MdOutlinePayment />} heading={"payment details"}>
-      {/* PENDING AMOUNT */}
-      <InfoCardRowTwo heading={"pending amount"} value={`₹ ${pendingAmount}`}>
-        {/* BUTTON TO EDIT THE PENDING AMOUNT */}
-        <SimpleBtn
-          name={"Edit"}
-          icon={<FaRegEdit />}
-          extraStyles={
-            "border-[1.45px] border-red-400/50 font-semibold text-red-500 text-xs"
-          }
-          handleBtn={showEditModal}
-        />
-      </InfoCardRowTwo>
-    </InfoCardOne>
+    <>
+      <InfoCardOne
+        headingIcon={<MdOutlinePayment />}
+        heading={"payment details"}
+        cardBtnName={"edit"}
+        cardBtnIcon={<FaRegEdit />}
+        cardExtraStyles={
+          "border-[1.45px] border-red-400/50 font-semibold text-red-500 text-xs capitalize"
+        }
+        handleCardBtn={showEditModal}
+      >
+        {/* Render deposit amount */}
+        <InfoCardRow heading={"deposit amount"} value={`₹ ${depositAmount}`} />
+
+        {/* Render paid amount */}
+        <InfoCardRow heading={"paid amount"} value={`₹ ${paidAmount}`} />
+
+        {/* Render PENDING AMOUNT */}
+        <InfoCardRow heading={"pending amount"} value={`₹ ${pendingAmount}`} />
+      </InfoCardOne>
+    </>
   );
 }
 

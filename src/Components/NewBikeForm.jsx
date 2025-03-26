@@ -21,12 +21,14 @@ function NewBikeForm() {
   // function to add new bike
   function handleAddNewBike(e) {
     e.preventDefault();
-    dispatch(addBike({ bikeRegNum: userInputState.bikeRegNum }))
-      .then(() => {
-        setUserInputState({});
-        dispatch(closeModal());
-        alert("added new bike!");
-        dispatch(getBikes());
+    dispatch(addBike({ bikeRegNum: userInputState.bikeRegNum.toLowerCase() }))
+      .unwrap()
+      .then((resp) => {
+        if (resp) {
+          setUserInputState({});
+          dispatch(closeModal());
+          dispatch(getBikes());
+        }
       })
       .catch((error) => {
         console.log("error in adding a new bike!", error);
@@ -50,7 +52,7 @@ function NewBikeForm() {
       {/* BIKE REG NUMBER */}
       <InputRow
         name={"bikeRegNum"}
-        label={"bike reg number"}
+        label={"bike register id"}
         type={"text"}
         handleChange={handleChange}
         value={userInputState?.bikeRegNum}

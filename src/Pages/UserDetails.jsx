@@ -1,16 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { FaUserCircle } from "react-icons/fa";
+
 import { FaPhoneAlt } from "react-icons/fa";
 import { FaRegMessage } from "react-icons/fa6";
 import { databases } from "../appwrite";
 import SimpleBtn from "../Components/Buttons/SimpleBtn";
 import { AssignForm, EditPaymentForm, Modal, SwapForm } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  returnBikeFrmUser,
-  updatePendingAmount,
-} from "../features/user/UserSlice";
+import { returnBikeFrmUser } from "../features/user/UserSlice";
 import Tabs from "../Components/Tabs/Tabs";
 import { Avatar } from "@mui/material";
 import { deepPurple } from "@mui/material/colors";
@@ -149,6 +146,8 @@ function UserDetails() {
             {isPendingPayment && (
               <EditPaymentForm
                 userId={paramId}
+                depositAmount={userDetails?.depositAmount}
+                paidAmount={userDetails?.paidAmount}
                 pendingAmount={userDetails?.pendingAmount}
                 getUser={getUser}
               />
