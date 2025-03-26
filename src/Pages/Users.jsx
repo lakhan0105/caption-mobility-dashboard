@@ -24,11 +24,6 @@ function Users() {
     }
   }, []);
 
-  // if users length is 0
-  // if (usersList?.length === 0) {
-  //   return <h2 className="ml-[300px] w-[calc(100%-300px)]">No users found!</h2>;
-  // }
-
   // open the modal when clicked on add new user
   function handleNewUser() {
     // modal has the UserForm that adds a new user
@@ -41,7 +36,7 @@ function Users() {
   }
 
   return (
-    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] ">
+    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
       <div className="max-w-[900px] overflow-hidden">
         {/* PAGE TOP SECTION*/}
         <PageHeader heading={"users list"} handleFunction={handleNewUser}>

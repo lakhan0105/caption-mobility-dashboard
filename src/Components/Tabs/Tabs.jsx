@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from "react";
-import UserBikeDetails from "./UserBikeDetails";
-import UserBatteryDetails from "./UserBatteryDetails";
+import React, { useState } from "react";
 import UserFullDetails from "./UserFullDetails";
 import UserRentalDetails from "./UserRentalDetails";
 import UserPaymentDetails from "./UserPaymentDetails";
@@ -12,6 +10,7 @@ function Tabs({ userDetails, handleReturnBike }) {
     batteryId: userBatteryId,
     userStatus,
     pendingAmount,
+    chargerStatus,
   } = userDetails;
 
   // tab Headings Data
@@ -59,9 +58,11 @@ function Tabs({ userDetails, handleReturnBike }) {
       {/* USER RENTAL TAB */}
       {activeTab === "user-rental" && (
         <UserRentalDetails
+          userId={userId}
           userBatteryId={userBatteryId}
           userBikeId={userBikeId}
           handleReturnBike={handleReturnBike}
+          chargerStatus={chargerStatus}
         />
       )}
 

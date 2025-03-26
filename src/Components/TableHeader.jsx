@@ -4,7 +4,7 @@ function TableHeader({ data, cols }) {
   return (
     <div
       style={{ gridTemplateColumns: cols }}
-      className="grid py-4 px-2 md:px-6 text-sm font-medium text-gray-600 uppercase gap-3"
+      className="grid py-3.5 px-5 md:px-6 text-xs font-medium text-zinc-700/80 uppercase gap-3"
     >
       {data.map((item, index) => {
         return (

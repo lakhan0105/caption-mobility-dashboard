@@ -16,7 +16,7 @@ function UserPaymentDetails({ pendingAmount }) {
   const dispatch = useDispatch();
 
   // show the modal to edit the payment details
-  function shoeEditModal() {
+  function showEditModal() {
     dispatch(showModal());
     dispatch(showEditPaymentModal());
   }
@@ -32,7 +32,7 @@ function UserPaymentDetails({ pendingAmount }) {
           extraStyles={
             "border-[1.45px] border-red-400/50 font-semibold text-red-500 text-xs"
           }
-          handleBtn={shoeEditModal}
+          handleBtn={showEditModal}
         />
       </InfoCardRowTwo>
     </InfoCardOne>

@@ -126,7 +126,7 @@ export const getUserByFilter = createAsyncThunk(
 export const assignBikeToUser = createAsyncThunk(
   "user/assignBikeToUser",
   async (
-    { selectedBikeId, selectedBatteryId, userId, pendingAmount },
+    { selectedBikeId, selectedBatteryId, userId, pendingAmount, chargerStatus },
     thunkAPI
   ) => {
     try {
@@ -140,6 +140,7 @@ export const assignBikeToUser = createAsyncThunk(
           batteryId: selectedBatteryId,
           totalSwapCount: 0,
           pendingAmount: Number(pendingAmount),
+          chargerStatus,
         }
       );
 
@@ -277,6 +278,19 @@ export const updatePendingAmount = createAsyncThunk(
       return resp;
     } catch (error) {
       console.log(error);
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+// deleteUser
+export const deleteUser = createAsyncThunk(
+  "user/deleteUser",
+  async (userId, thunkAPI) => {
+    try {
+      const resp = await databases.deleteDocument(dbId, usersCollId, userId);
+      return resp;
+    } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
   }
@@ -427,6 +441,18 @@ const userSlice = createSlice({
       .addCase(getUserByFilter.rejected, (state, { payload }) => {
         state.isUserLoading = false;
         console.log("error in user/getUserBySearch");
+        console.log(payload);
+      })
+      .addCase(deleteUser.pending, (state) => {
+        state.isUserLoading = true;
+      })
+      .addCase(deleteUser.fulfilled, (state) => {
+        state.isUserLoading = false;
+        toast.success("deleted the user successfully!");
+      })
+      .addCase(deleteUser.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/deleteUser");
         console.log(payload);
       });
   },

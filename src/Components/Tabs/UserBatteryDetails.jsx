@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from "react";
 import moment from "moment";
 import SimpleBtn from "../Buttons/SimpleBtn";
-import { FaPlus } from "react-icons/fa6";
-import {
-  hideLoader,
-  showLoader,
-  showModal,
-  showSwapForm,
-} from "../../features/modal/modalSlice";
+
+import { showModal, showSwapForm } from "../../features/modal/modalSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { getBatteryById } from "../../features/battery/batterySlice";
 import InfoCardOne from "../InfoCardOne";
@@ -15,8 +10,10 @@ import { PiBatteryPlusBold, PiSwap } from "react-icons/pi";
 import InfoCardRow from "../InfoCardRow";
 import { PiSwapBold } from "react-icons/pi";
 import InfoCardRowTwo from "../InfoCardRowTwo";
+import { FaCheckCircle } from "react-icons/fa";
+import { FaRegCircleXmark } from "react-icons/fa6";
 
-function UserBatteryDetails({ userBatteryId }) {
+function UserBatteryDetails({ userBatteryId, chargerStatus }) {
   const dispatch = useDispatch();
   const { batteryById, isLoading } = useSelector(
     (state) => state.batteryReducer
@@ -57,6 +54,22 @@ function UserBatteryDetails({ userBatteryId }) {
       <InfoCardRow
         heading={"assigned on"}
         value={moment(batteryById?.assignedAt).format("lll")}
+      />
+
+      {/* CHARGER ASSIGNED OR NOT */}
+      <InfoCardRow
+        heading={"charger status"}
+        value={
+          chargerStatus ? (
+            <span className="flex items-center gap-1">
+              charger provided <FaCheckCircle />
+            </span>
+          ) : (
+            <span className="flex items-center gap-1">
+              no charger provided <FaRegCircleXmark />
+            </span>
+          )
+        }
       />
     </InfoCardOne>
   );

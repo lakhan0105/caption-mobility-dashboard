@@ -33,6 +33,7 @@ function AssignForm({ getUser, oldPendingAmount }) {
     selectedBikeId: null,
     selectedBatteryId: null,
     pendingAmount: 0,
+    chargerStatus: false,
   });
 
   // handleChange (runs when the select bike form is modified)
@@ -50,14 +51,12 @@ function AssignForm({ getUser, oldPendingAmount }) {
     e.preventDefault();
 
     // check if the bike is selected by the user
-    if (
-      !assignmentData.selectedBikeId ||
-      !assignmentData.selectedBatteryId ||
-      !assignmentData?.pendingAmount
-    ) {
+    if (!assignmentData.selectedBikeId || !assignmentData.selectedBatteryId) {
       toast.error("please fill all the details");
       return;
     }
+
+    console.log(assignmentData);
 
     // - assign the bike to the user with the particular id in appwrite
     // - change the userStatus to true
@@ -82,7 +81,7 @@ function AssignForm({ getUser, oldPendingAmount }) {
   }
 
   return (
-    <form className="bg-white w-full max-w-[400px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative ">
+    <form className="bg-white w-full max-w-[400px] px-10 py-10 pt-14 rounded flex flex-col gap-6 relative ">
       {/* CLOSE MODAL BUTTON */}
       <button
         className="absolute right-4 top-4 cursor-pointer"
@@ -94,63 +93,84 @@ function AssignForm({ getUser, oldPendingAmount }) {
       </button>
 
       {/* SELECT INPUT FOR BIKE  */}
-      <label htmlFor="bike">Select Bike</label>
-      <select
-        name="selectedBikeId"
-        id="bike"
-        className="border rounded text-sm"
-        onChange={handleChange}
-        value={assignmentData.selectedBikeId || ""}
-      >
-        <option value="" disabled>
-          bikes
-        </option>
+      <div>
+        <label htmlFor="bike">Select Bike</label>
+        <select
+          name="selectedBikeId"
+          id="bike"
+          className="border rounded text-sm block w-full"
+          onChange={handleChange}
+          value={assignmentData.selectedBikeId || ""}
+        >
+          <option value="" disabled>
+            bikes
+          </option>
 
-        {availableBikes?.map((bike) => {
-          const { $id, bikeRegNum } = bike;
-          return (
-            <option value={$id} key={$id}>
-              {bikeRegNum}
-            </option>
-          );
-        })}
-      </select>
+          {availableBikes?.map((bike) => {
+            const { $id, bikeRegNum } = bike;
+            return (
+              <option value={$id} key={$id}>
+                {bikeRegNum}
+              </option>
+            );
+          })}
+        </select>
+      </div>
 
       {/* SELECT INPUT FOR BATTERY  */}
-      <label htmlFor="bike">Select Battery</label>
-      <select
-        name="selectedBatteryId"
-        id="battery"
-        className="border rounded text-sm"
-        onChange={handleChange}
-        value={assignmentData.selectedBatteryId || ""}
-      >
-        <option value="" disabled>
-          batteries
-        </option>
+      <div>
+        <label htmlFor="bike">Select Battery</label>
+        <select
+          name="selectedBatteryId"
+          id="battery"
+          className="border rounded text-sm block w-full"
+          onChange={handleChange}
+          value={assignmentData.selectedBatteryId || ""}
+        >
+          <option value="" disabled>
+            batteries
+          </option>
 
-        {availableBatteries?.map((battery) => {
-          const { $id, batRegNum } = battery;
-          return (
-            <option value={$id} key={$id}>
-              {batRegNum}
-            </option>
-          );
-        })}
-      </select>
+          {availableBatteries?.map((battery) => {
+            const { $id, batRegNum } = battery;
+            return (
+              <option value={$id} key={$id}>
+                {batRegNum}
+              </option>
+            );
+          })}
+        </select>
+      </div>
+
+      {/* CHARGER PROVIDED OR NOT */}
+      <div className="flex gap-2">
+        <input
+          type="checkbox"
+          id="chargerStatus"
+          value={assignmentData.chargerStatus}
+          onChange={() => {
+            setAssignmentData((prev) => {
+              return { ...prev, chargerStatus: !assignmentData.chargerStatus };
+            });
+          }}
+        />
+        <label htmlFor="chargerStatus">Charger provided</label>
+      </div>
 
       {/* PENDING PAYMENT INPUT */}
-      <InputRow
-        name={"pendingAmount"}
-        type={"number"}
-        label={"Pending Amount"}
-        handleChange={handleChange}
-        value={assignmentData.pendingAmount}
-      >
-        <p className="text-xs text-red-500 font-medium mb-1">
-          old pending amount: ₹ {oldPendingAmount}
-        </p>
-      </InputRow>
+      <div>
+        <InputRow
+          name={"pendingAmount"}
+          type={"number"}
+          label={"Pending Amount"}
+          handleChange={handleChange}
+          value={assignmentData.pendingAmount}
+        >
+          <p className="text-xs text-red-500 font-medium mb-1">
+            old pending amount: ₹ {oldPendingAmount}
+          </p>
+        </InputRow>
+      </div>
 
       <SubmitBtn text={"Assign bike"} handleSubmit={handleAssignBike} />
     </form>
