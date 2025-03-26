@@ -10,7 +10,7 @@ function InputRow({
   children,
 }) {
   return (
-    <div className="flex flex-col items-start mb-5">
+    <div className="flex flex-col items-start mb-0">
       <label htmlFor={name} className="capitalize mb-2">
         {label}
       </label>

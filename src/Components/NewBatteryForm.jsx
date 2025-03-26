@@ -27,14 +27,18 @@ function NewBatteryForm() {
   function handleAddNewBattery(e) {
     e.preventDefault();
 
-    dispatch(addNewBattery({ batRegNum: userInputState.batRegNum }))
-      .then(() => {
-        setUserInputState({});
-        dispatch(closeModal());
-        dispatch(getBatteriesList());
+    dispatch(
+      addNewBattery({ batRegNum: userInputState.batRegNum.toLowerCase() })
+    )
+      .unwrap()
+      .then((resp) => {
+        if (resp) {
+          setUserInputState({});
+          dispatch(closeModal());
+          dispatch(getBatteriesList());
+        }
       })
       .catch((error) => {
-        alert("could not add a new bike!");
         console.log(error);
       });
   }
@@ -56,7 +60,7 @@ function NewBatteryForm() {
       {/* BATTERY REG NUMBER */}
       <InputRow
         name={"batRegNum"}
-        label={"battery reg number"}
+        label={"battery register id"}
         type={"text"}
         handleChange={handleChange}
         value={userInputState.batRegNum}

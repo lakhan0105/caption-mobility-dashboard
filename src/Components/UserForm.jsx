@@ -12,6 +12,7 @@ import { addCompanyIfNew } from "../features/company/companySlice";
 function UserForm() {
   const [userInputState, setUserInputState] = useState({
     userName: "",
+    userRegisterId: "",
     userPhone: "",
     userCompany: "",
     userLocation: "",
@@ -42,6 +43,7 @@ function UserForm() {
     const userData = {
       docID,
       userName: userInputState.userName,
+      userRegisterId: userInputState.userRegisterId,
       userPhone: userInputState.userPhone,
       userCompany: userInputState.userCompany,
       userLocation: userInputState.userLocation,
@@ -86,6 +88,15 @@ function UserForm() {
         required={true}
         handleChange={handleChange}
         value={userInputState.userName}
+      />
+
+      <InputRow
+        name={"userRegisterId"}
+        type={"text"}
+        label={"Register Id"}
+        required={true}
+        handleChange={handleChange}
+        value={userInputState.userRegisterId}
       />
 
       <InputRow

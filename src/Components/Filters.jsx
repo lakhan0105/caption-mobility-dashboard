@@ -14,7 +14,15 @@ function Filters() {
 
   // function load companies buttons
   function loadCompaniesBtns() {
-    dispatch(getCompanyNames());
+    dispatch(getCompanyNames())
+      .unwrap()
+      .then(() => {
+        // after the companies have been loaded, hide the plus button
+        const plusBtn = document.querySelector(".plus-btn");
+        if (plusBtn) {
+          plusBtn.classList.add("hidden");
+        }
+      });
   }
 
   // grab the companyNames state from the companyReducer
@@ -82,7 +90,10 @@ function Filters() {
             );
           })}
 
-        <button className="text-2xl text-white/85" onClick={loadCompaniesBtns}>
+        <button
+          className="plus-btn text-2xl text-white/85"
+          onClick={loadCompaniesBtns}
+        >
           <CiCirclePlus />
         </button>
       </div>
