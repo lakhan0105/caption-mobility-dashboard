@@ -2,27 +2,32 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getCompanyNames } from "../features/company/companySlice";
 import { getUserByFilter, getUsersList } from "../features/user/UserSlice";
+import { CiCirclePlus } from "react-icons/ci";
 
 function Filters() {
   const dispatch = useDispatch();
 
   const [activeBtn, setActiveBtn] = useState("all");
 
-  // get all the Company names -> in array format
-  useEffect(() => {
+  // state to store and set the filter button names
+  const [btnNames, setBtnNames] = useState(["all", "active", "pending"]);
+
+  // function load companies buttons
+  function loadCompaniesBtns() {
     dispatch(getCompanyNames());
-  }, []);
+  }
 
   // grab the companyNames state from the companyReducer
   const { companyNames, isLoading } = useSelector(
     (state) => state.companyReducer
   );
 
-  // state to store and set the filter button names
-  const [btnNames, setBtnNames] = useState("");
+  // runs when the companyNames changes
   useEffect(() => {
     if (companyNames) {
-      setBtnNames(["all", "active", "pending", ...companyNames]);
+      setBtnNames((prev) => {
+        return [...prev, ...companyNames];
+      });
     }
   }, [companyNames]);
 
@@ -76,6 +81,10 @@ function Filters() {
               </button>
             );
           })}
+
+        <button className="text-2xl text-white/85" onClick={loadCompaniesBtns}>
+          <CiCirclePlus />
+        </button>
       </div>
     </div>
   );

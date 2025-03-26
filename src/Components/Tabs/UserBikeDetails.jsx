@@ -34,26 +34,6 @@ function UserBikeDetails({ userBikeId, handleReturnBike }) {
   }
 
   if (!userBikeId) {
-    return (
-      <InfoCardOne
-        headingIcon={<MdOutlinePedalBike />}
-        heading={"bike details"}
-      >
-        <p className="text-xs mb-3 text-zinc-700/80">
-          No bike and battery assigned to the user yet
-        </p>
-
-        <SimpleBtn
-          name={"Assign"}
-          icon={<FaPlus />}
-          extraStyles={"py-1.5 text-xs"}
-          handleBtn={() => {
-            dispatch(showModal());
-            dispatch(showAssignForm());
-          }}
-        />
-      </InfoCardOne>
-    );
   }
 
   return (

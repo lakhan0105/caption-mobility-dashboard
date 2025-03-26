@@ -4,7 +4,7 @@ const TableRow = ({ children, cols }) => {
   return (
     <div
       style={{ gridTemplateColumns: cols }}
-      className="grid items-start text-sm py-4 px-2 md:px-6 hover:bg-gray-200/50 pointer border-t gap-3"
+      className="grid items-start text-sm py-4 px-5 md:px-6 hover:bg-gray-200/50 pointer border-t gap-3"
     >
       {children}
     </div>

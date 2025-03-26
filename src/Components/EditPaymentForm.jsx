@@ -4,6 +4,7 @@ import { closeModal } from "../features/modal/modalSlice";
 import InputRow from "./InputRow";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import { updatePendingAmount } from "../features/user/UserSlice";
+import toast from "react-hot-toast";
 
 function EditPaymentForm({ userId, pendingAmount, getUser }) {
   const dispatch = useDispatch();
@@ -11,6 +12,12 @@ function EditPaymentForm({ userId, pendingAmount, getUser }) {
   const [newPendingAmount, setNewPendingAmount] = useState(pendingAmount);
 
   async function handleEdit() {
+    // check if an invalid input is provided in payment input
+    if (newPendingAmount === "" || newPendingAmount < 0) {
+      toast.error("please enter a valid number!");
+      return;
+    }
+
     try {
       await dispatch(
         updatePendingAmount({ userId, newPendingAmount })
@@ -40,8 +47,14 @@ function EditPaymentForm({ userId, pendingAmount, getUser }) {
         label={"Edit pending payment"}
         value={newPendingAmount}
         handleChange={(e) => {
-          console.log(e.target.value);
-          setNewPendingAmount(Number(e.target.value));
+          const value = e.target.value;
+
+          // allows us to remove the 0 from the number input
+          if (value === "") {
+            setNewPendingAmount(value);
+          } else {
+            setNewPendingAmount(Number(value));
+          }
         }}
       />
 
