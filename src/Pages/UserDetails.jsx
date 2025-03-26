@@ -71,7 +71,7 @@ function UserDetails() {
   }
 
   if (userDetails) {
-    const { $id, userName } = userDetails;
+    const { $id, userName, userRegisterId } = userDetails;
 
     return (
       <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
@@ -98,7 +98,9 @@ function UserDetails() {
             {/* BASIC INFO */}
             <div className="mt-0">
               <h2 className="text-2xl font-semibold">{userName}</h2>
-              <p className="text-xs font-medium tex-zinc-500 mt-1.5">{$id}</p>
+              <p className="text-xs font-medium tex-zinc-500 mt-1.5">
+                {userRegisterId}
+              </p>
 
               {/* BUTTONS TO CALL AND MESSAGE THE USER */}
               <div className="mt-2.5">

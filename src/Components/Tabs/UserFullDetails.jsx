@@ -12,12 +12,13 @@ function UserFullDetails({ userFullDetailsState }) {
     userStatus,
     userNotes,
     userLocation,
+    userRegisterId,
   } = userFullDetailsState;
 
   return (
     <div className="px-6 py-7">
-      {/* USER ID */}
-      <InfoCardRow heading={"user id"} value={$id} />
+      {/* USER REGISTER ID */}
+      <InfoCardRow heading={"user register id"} value={userRegisterId} />
 
       {/* USER NAME */}
       <InfoCardRow heading={"name"} value={userName} />
@@ -36,6 +37,9 @@ function UserFullDetails({ userFullDetailsState }) {
         heading={"created at"}
         value={moment($createdAt).format("lll")}
       />
+
+      {/* USER ID */}
+      <InfoCardRow heading={"appwrite user id"} value={$id} />
     </div>
   );
 }
