@@ -1,15 +1,20 @@
 // This component is for taking the input details for adding a new user
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import InputRow from "./InputRow";
 import { useDispatch, useSelector } from "react-redux";
 import { closeModal } from "../features/modal/modalSlice";
-import { createUser, getUsersList } from "../features/user/UserSlice";
+import { createUser, editUser, getUsersList } from "../features/user/UserSlice";
 import { ID } from "appwrite";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import toast from "react-hot-toast";
 import { addCompanyIfNew } from "../features/company/companySlice";
 
 function UserForm() {
+  const { isEditUser, selectedUser } = useSelector(
+    (state) => state.userReducer
+  );
+  const dispatch = useDispatch();
+
   const [userInputState, setUserInputState] = useState({
     userName: "",
     userRegisterId: "",
@@ -18,7 +23,18 @@ function UserForm() {
     userLocation: "",
   });
 
-  const dispatch = useDispatch();
+  // when this component load, check if isEdit is true, if true then automatically fill the form with the details, so the user can edit it
+  useEffect(() => {
+    if (isEditUser) {
+      setUserInputState({
+        userName: selectedUser?.userName,
+        userRegisterId: selectedUser?.userRegisterId,
+        userPhone: selectedUser?.userPhone,
+        userCompany: selectedUser?.userCompany,
+        userLocation: selectedUser?.userLocation,
+      });
+    }
+  }, []);
 
   // handleCloseModal
   function handleCloseModal() {
@@ -35,33 +51,42 @@ function UserForm() {
     });
   }
 
+  // postUserSuccess
+  function postUserSuccess(msg, companyName) {
+    if (!companyName) return;
+
+    dispatch(addCompanyIfNew(companyName.toLowerCase()));
+
+    setUserInputState({ userName: "", userPhone: "", userCompany: "" });
+    dispatch(closeModal());
+    toast.success(msg);
+    dispatch(getUsersList());
+  }
+
   // handleAddUser
   function handleAddUser(e) {
     e.preventDefault();
     const docID = ID.unique();
 
+    console.log("running handleAddUser...");
+
     const userData = {
       docID,
-      userName: userInputState.userName,
+      userName: userInputState.userName.toLowerCase(),
       userRegisterId: userInputState.userRegisterId,
       userPhone: userInputState.userPhone,
-      userCompany: userInputState.userCompany,
-      userLocation: userInputState.userLocation,
+      userCompany: userInputState.userCompany.toLowerCase(),
+      userLocation: userInputState.userLocation.toLowerCase(),
     };
-
-    console.log(userData);
 
     dispatch(createUser(userData))
       .then((resp) => {
         if (createUser.fulfilled.match(resp)) {
           // if the user has been created successfully then add a company name (if new)
-
-          dispatch(addCompanyIfNew(userInputState.userCompany.toLowerCase()));
-
-          setUserInputState({ userName: "", userPhone: "", userCompany: "" });
-          dispatch(closeModal());
-          toast.success("user created successfully");
-          dispatch(getUsersList());
+          postUserSuccess(
+            "user created successfully!",
+            userInputState.userCompany
+          );
         }
       })
       .catch((error) => {
@@ -69,10 +94,26 @@ function UserForm() {
       });
   }
 
+  // handleEditUser
+  function handleEditUser(e) {
+    e.preventDefault();
+    console.log("edit the user details");
+    console.log({ userId: selectedUser?.$id, ...userInputState });
+    dispatch(editUser({ userId: selectedUser?.$id, ...userInputState }))
+      .then((resp) => {
+        if (editUser.fulfilled.match(resp)) {
+          postUserSuccess("updated successfully!", userInputState.userCompany);
+        }
+      })
+      .catch((error) => {
+        alert("error in updating user details", error);
+      });
+  }
+
   return (
     <form
       className="bg-white w-full max-w-[350px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative"
-      onSubmit={handleAddUser}
+      onSubmit={!isEditUser ? handleAddUser : handleEditUser}
     >
       <button
         className="absolute right-4 top-4 cursor-pointer"
@@ -126,7 +167,7 @@ function UserForm() {
         value={userInputState.userLocation}
       />
 
-      <SubmitBtn text={"create a new user"} />
+      <SubmitBtn text={isEditUser ? "update" : "create a new user"} />
     </form>
   );
 }

@@ -71,7 +71,7 @@ function Filters() {
 
   return (
     <div className="borde max-w-[475px] mt-7 overflow-x-scroll no-scrollbar">
-      <div className="text-xs w-max overflow-x-scroll flex gap-4 whitespace-nowrap">
+      <div className="text-xs w-max overflow-x-scroll flex gap-4 whitespace-nowrap pr-24">
         {btnNames &&
           btnNames?.map((btnName, index) => {
             return (

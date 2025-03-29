@@ -13,6 +13,7 @@ import Modal from "./Modal";
 import Navbar from "./Navbar";
 import NewBatteryForm from "./NewBatteryForm";
 import NewBikeForm from "./NewBikeForm";
+import OptionsModal from "./OptionsModal";
 import PageHeader from "./PageHeader";
 import ProfileRow from "./ProfileRow";
 import SearchBar from "./SearchBar";
@@ -50,4 +51,5 @@ export {
   EditPaymentForm,
   SearchBar,
   Filters,
+  OptionsModal,
 };

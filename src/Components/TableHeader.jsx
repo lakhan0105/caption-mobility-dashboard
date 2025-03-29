@@ -8,7 +8,7 @@ function TableHeader({ data, cols }) {
     >
       {data.map((item, index) => {
         return (
-          <p className={index === 2 ? "justify-self-center" : ""} key={index}>
+          <p className={index >= 2 ? "justify-self-center" : ""} key={index}>
             {item}
           </p>
         );
