@@ -8,7 +8,11 @@ import {
   UsersTable,
 } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
-import { getUserBySearch, getUsersList } from "../features/user/UserSlice";
+import {
+  getUserBySearch,
+  getUsersList,
+  setEditUser,
+} from "../features/user/UserSlice";
 import { showModal } from "../features/modal/modalSlice";
 
 function Users() {
@@ -26,6 +30,9 @@ function Users() {
 
   // open the modal when clicked on add new user
   function handleNewUser() {
+    // set the isEditUser to false
+    dispatch(setEditUser(false));
+
     // modal has the UserForm that adds a new user
     dispatch(showModal());
   }

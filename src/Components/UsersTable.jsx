@@ -1,21 +1,48 @@
-import React from "react";
-import { GenericTable, TableHeader, TableRow } from "../Components";
-import { useSelector } from "react-redux";
+import React, { useState } from "react";
+import {
+  GenericTable,
+  OptionsModal,
+  TableHeader,
+  TableRow,
+} from "../Components";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router";
+import { SlOptionsVertical } from "react-icons/sl";
+import { setSelectedUser } from "../features/user/UserSlice";
 
 // This component will accept the user data, we need pass the headings and cols for mobile and large screens
 // we pass everything as a children to the genricTable component
 
 function UsersTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
+  const dispatch = useDispatch();
 
   const userTableHeadings = isMobile
-    ? ["#", "user", "status", "company"]
+    ? ["#", "user", "status", "company", ""]
     : ["#", "user", "status", "phone", "company"];
 
   const userCols = isMobile
-    ? "0.1fr 0.6fr 0.5fr 0.4fr"
-    : "0.1fr 1fr 0.5fr 1fr 0.5fr";
+    ? "0.1fr 0.6fr 0.5fr 0.4fr 0.05fr"
+    : "0.1fr 1fr 0.5fr 1fr 0.5fr 0.05fr";
+
+  const [optionBtnPositions, setOptionBtnPositions] = useState({
+    x: "",
+    y: "",
+  });
+  const [showOptions, setShowOptions] = useState(false);
+
+  // handleOptionsModal
+  function showOptionsModal(e, data) {
+    e.preventDefault();
+    setOptionBtnPositions({ x: e.clientX, y: e.clientY });
+
+    // toggle the options container
+    setShowOptions((prev) => {
+      return !prev;
+    });
+
+    dispatch(setSelectedUser(data));
+  }
 
   return (
     <GenericTable>
@@ -90,8 +117,20 @@ function UsersTable({ data }) {
                   )}
                 </div>
 
-                <p>{userCompany}</p>
+                <p className="flex justify-center">{userCompany}</p>
                 {!isMobile && <p>{userPhone}</p>}
+
+                <button
+                  onClick={(e) => {
+                    showOptionsModal(e, item);
+                  }}
+                >
+                  <SlOptionsVertical />
+                </button>
+
+                {showOptions && (
+                  <OptionsModal optionBtnPositions={optionBtnPositions} />
+                )}
               </TableRow>
             </Link>
           );

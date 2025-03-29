@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite";
-import { ID } from "appwrite";
+import { ID, Query } from "appwrite";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const companyCollId = import.meta.env.VITE_COMPANY_COLL_ID;
@@ -15,10 +15,12 @@ export const addCompanyIfNew = createAsyncThunk(
   "company/addCompanyIfNew",
   async (companyName, thunkAPI) => {
     try {
-      const resp = await databases.listDocuments(dbId, companyCollId);
-      const existingCompanies = resp?.documents?.map((doc) => doc.companyName);
+      const resp = await databases.listDocuments(dbId, companyCollId, [
+        Query.equal("companyName", companyName),
+      ]);
 
-      if (!existingCompanies.includes(companyName)) {
+      // if no companyName already exists, then create one
+      if (resp.documents.length === 0) {
         const resp = await databases.createDocument(
           dbId,
           companyCollId,

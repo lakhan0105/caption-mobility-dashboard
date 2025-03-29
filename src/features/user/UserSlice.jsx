@@ -16,6 +16,8 @@ const initialState = {
   usersList: null,
   errMsg: null,
   activeUsers: null,
+  isEditUser: false,
+  selectedUser: null,
 };
 
 // createUser
@@ -58,6 +60,34 @@ export const createUser = createAsyncThunk(
       return resp;
     } catch (error) {
       console.log(error.response.data);
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+// editUser
+export const editUser = createAsyncThunk(
+  "user/editUser",
+  async (data, thunkAPI) => {
+    const {
+      userId,
+      userName,
+      userRegisterId,
+      userPhone,
+      userCompany,
+      userLocation,
+    } = data;
+
+    try {
+      const resp = await databases.updateDocument(dbId, usersCollId, userId, {
+        userName,
+        userRegisterId,
+        userPhone,
+        userCompany,
+        userLocation,
+      });
+      return resp;
+    } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
   }
@@ -320,7 +350,16 @@ export const deleteUser = createAsyncThunk(
 const userSlice = createSlice({
   name: "user",
   initialState,
-  reducers: {},
+  reducers: {
+    setEditUser(state, { payload }) {
+      state.isEditUser = payload;
+    },
+    setSelectedUser(state, { payload }) {
+      console.log("running setSelectedUser");
+      console.log(payload);
+      state.selectedUser = payload;
+    },
+  },
   extraReducers(builder) {
     builder
       .addCase(getUserProfile.pending, (state) => {
@@ -479,8 +518,21 @@ const userSlice = createSlice({
         state.isUserLoading = false;
         console.log("error in user/deleteUser");
         console.log(payload);
+      })
+      .addCase(editUser.pending, (state) => {
+        state.isUserLoading = true;
+      })
+      .addCase(editUser.fulfilled, (state) => {
+        state.isUserLoading = false;
+        toast.success("updated the user details successfully!");
+      })
+      .addCase(editUser.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/editUser");
+        console.log(payload);
       });
   },
 });
 
+export const { setEditUser, setSelectedUser } = userSlice.actions;
 export default userSlice.reducer;
