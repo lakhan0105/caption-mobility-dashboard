@@ -1,11 +1,31 @@
 import React from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import GenericTable from "./GenericTable";
 import TableHeader from "./TableHeader";
 import TableRow from "./TableRow";
+import { SlOptionsVertical } from "react-icons/sl";
+import {
+  deleteBike,
+  getBikes,
+  setEditBike,
+  setSelectedBike,
+} from "../features/bike/bikeSlice";
+import {
+  hideOptionsModal,
+  setOptionsModalPosition,
+  showModal,
+  showOptionsModal,
+} from "../features/modal/modalSlice";
+import OptionsModal from "./OptionsModal";
+import toast from "react-hot-toast";
 
 function BikesTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
+  const { selectedBike, isLoading } = useSelector((state) => state.bikeReducer);
+  const { optionsModalState, optionsModalPosition } = useSelector(
+    (state) => state.modalReducer
+  );
+  const dispatch = useDispatch();
 
   // data to pass in tableHeader and body
   const bikesTableHeadings = isMobile
@@ -13,8 +33,51 @@ function BikesTable({ data }) {
     : ["#", "bike number", "status", "curr owner", "assigned at"];
 
   const bikesTableCols = isMobile
-    ? "0.1fr 0.6fr 0.5fr"
+    ? "0.1fr 0.6fr 0.5fr 0.05fr"
     : "0.1fr 0.6fr 0.5fr 0.5fr 0.5fr";
+
+  // handleOptionsBtn
+  function handleOptionsBtn(e, data) {
+    e.preventDefault();
+
+    if (optionsModalState) {
+      dispatch(hideOptionsModal());
+      dispatch(setEditBike(false));
+    } else {
+      dispatch(showOptionsModal());
+      dispatch(setOptionsModalPosition({ x: e.clientX, y: e.clientY }));
+      dispatch(setSelectedBike(data));
+    }
+  }
+
+  // handle edit btn
+  function handleEditBike(e) {
+    e.preventDefault();
+    dispatch(setEditBike(true));
+    dispatch(showModal());
+  }
+
+  // handle delete btn
+  function handleDeleteBike(e) {
+    e.preventDefault();
+
+    if (selectedBike?.currOwner) {
+      toast.error(
+        "The bike is active and cannot be delete! please make it inactive"
+      );
+    }
+
+    dispatch(deleteBike(selectedBike?.$id))
+      .unwrap()
+      .then(() => {
+        dispatch(hideOptionsModal());
+        dispatch(getBikes());
+      });
+  }
+
+  if (isLoading) {
+    return <h2 className="text-center">Loading...</h2>;
+  }
 
   return (
     <GenericTable>
@@ -52,6 +115,22 @@ function BikesTable({ data }) {
 
               {!isMobile && <p>{currOwner ? currOwner : "-"}</p>}
               {!isMobile && <p>{assignedAt ? assignedAt : "-"}</p>}
+
+              {/* OPTIONS BUTTON */}
+              <button
+                onClick={(e) => {
+                  handleOptionsBtn(e, item);
+                }}
+              >
+                <SlOptionsVertical />
+              </button>
+
+              {optionsModalState && (
+                <OptionsModal
+                  handleEditBtn={handleEditBike}
+                  handleDeleteBtn={handleDeleteBike}
+                />
+              )}
             </TableRow>
           );
         })}

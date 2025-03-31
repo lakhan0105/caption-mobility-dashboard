@@ -11,6 +11,8 @@ const initialState = {
   bikesList: null,
   availableBikes: null,
   bikeById: null,
+  isEditBike: false,
+  selectedBike: null,
 };
 
 export const getBikes = createAsyncThunk(
@@ -110,10 +112,47 @@ export const addBike = createAsyncThunk(
   }
 );
 
+// edit bike reg number
+export const editBikeRegNum = createAsyncThunk(
+  "bike/editBikeRegNum",
+  async (data, thunkAPI) => {
+    const { bikeId, bikeRegNum } = data;
+    console.log(data);
+    try {
+      const resp = await databases.updateDocument(dbId, bikesCollId, bikeId, {
+        bikeRegNum,
+      });
+      console.log(resp);
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+export const deleteBike = createAsyncThunk(
+  "bike/deleteBike",
+  async (bikeId, thunkAPI) => {
+    try {
+      const resp = await databases.deleteDocument(dbId, bikesCollId, bikeId);
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
 const bikeSlice = createSlice({
   name: "bikeReducer",
   initialState,
-  reducers: {},
+  reducers: {
+    setSelectedBike(state, { payload }) {
+      state.selectedBike = payload;
+    },
+    setEditBike(state, { payload }) {
+      state.isEditBike = payload;
+    },
+  },
   extraReducers(builder) {
     builder
       .addCase(getBikes.pending, (state, action) => {
@@ -174,14 +213,38 @@ const bikeSlice = createSlice({
       .addCase(addBike.rejected, (state, { payload }) => {
         state.isLoading = false;
         console.log(payload.code);
-
         if (payload.code === 409) {
           toast.error("bike with same id is already present!");
         }
-
+        console.log(payload);
+      })
+      .addCase(editBikeRegNum.pending, (state, action) => {
+        state.isLoading = true;
+      })
+      .addCase(editBikeRegNum.fulfilled, (state, { payload }) => {
+        state.isLoading = false;
+        toast.success("updated bike register number successfully!");
+      })
+      .addCase(editBikeRegNum.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        console.log(payload.code);
+        console.log(payload);
+      })
+      .addCase(deleteBike.pending, (state, action) => {
+        state.isLoading = true;
+      })
+      .addCase(deleteBike.fulfilled, (state, { payload }) => {
+        state.isLoading = false;
+        toast.success("deleted the bike successfully!");
+      })
+      .addCase(deleteBike.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        console.log(payload.code);
+        toast.error("could not delete the bike");
         console.log(payload);
       });
   },
 });
 
+export const { setSelectedBike, setEditBike } = bikeSlice.actions;
 export default bikeSlice.reducer;

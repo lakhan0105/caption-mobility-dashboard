@@ -8,12 +8,13 @@ import {
   UsersTable,
 } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
+
 import {
   getUserBySearch,
   getUsersList,
   setEditUser,
 } from "../features/user/UserSlice";
-import { showModal } from "../features/modal/modalSlice";
+import { hideOptionsModal, showModal } from "../features/modal/modalSlice";
 
 function Users() {
   const { usersList, isUserLoading } = useSelector(
@@ -26,6 +27,8 @@ function Users() {
     if (!usersList || !usersList?.length) {
       dispatch(getUsersList());
     }
+
+    dispatch(hideOptionsModal());
   }, []);
 
   // open the modal when clicked on add new user

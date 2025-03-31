@@ -8,13 +8,28 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router";
 import { SlOptionsVertical } from "react-icons/sl";
-import { setSelectedUser } from "../features/user/UserSlice";
+
+import {
+  hideOptionsModal,
+  setOptionsModalPosition,
+  showModal,
+  showOptionsModal,
+} from "../features/modal/modalSlice";
+
+import {
+  setSelectedUser,
+  setEditUser,
+  deleteUser,
+  getUsersList,
+} from "../features/user/UserSlice";
 
 // This component will accept the user data, we need pass the headings and cols for mobile and large screens
 // we pass everything as a children to the genricTable component
 
 function UsersTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
+  const { selectedUser } = useSelector((state) => state.userReducer);
+  const { optionsModalState } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
 
   const userTableHeadings = isMobile
@@ -25,23 +40,40 @@ function UsersTable({ data }) {
     ? "0.1fr 0.6fr 0.5fr 0.4fr 0.05fr"
     : "0.1fr 1fr 0.5fr 1fr 0.5fr 0.05fr";
 
-  const [optionBtnPositions, setOptionBtnPositions] = useState({
-    x: "",
-    y: "",
-  });
-  const [showOptions, setShowOptions] = useState(false);
-
-  // handleOptionsModal
-  function showOptionsModal(e, data) {
+  // showOptionsModal
+  function handleOptionsBtn(e, data) {
     e.preventDefault();
-    setOptionBtnPositions({ x: e.clientX, y: e.clientY });
 
-    // toggle the options container
-    setShowOptions((prev) => {
-      return !prev;
-    });
+    if (optionsModalState) {
+      dispatch(hideOptionsModal());
+    } else {
+      dispatch(showOptionsModal());
+      dispatch(setOptionsModalPosition({ x: e.clientX, y: e.clientY }));
+      dispatch(setSelectedUser(data));
+    }
+  }
 
-    dispatch(setSelectedUser(data));
+  // runs when the edit btn is clicked on a user list
+  // opens a modal (userForm) to edit the user information
+  function showEditForm(e) {
+    e.preventDefault();
+
+    // set the isEdit to true in userSlice
+    dispatch(setEditUser(true));
+
+    // show modal -> opens a modal with users form
+    dispatch(showModal());
+  }
+
+  // function to handle deletion of a user from users list
+  function handleUserDelete(e) {
+    e.preventDefault();
+    dispatch(deleteUser(selectedUser?.$id))
+      .unwrap()
+      .then(() => {
+        dispatch(getUsersList());
+        dispatch(hideOptionsModal());
+      });
   }
 
   return (
@@ -122,14 +154,17 @@ function UsersTable({ data }) {
 
                 <button
                   onClick={(e) => {
-                    showOptionsModal(e, item);
+                    handleOptionsBtn(e, item);
                   }}
                 >
                   <SlOptionsVertical />
                 </button>
 
-                {showOptions && (
-                  <OptionsModal optionBtnPositions={optionBtnPositions} />
+                {optionsModalState && (
+                  <OptionsModal
+                    handleEditBtn={showEditForm}
+                    handleDeleteBtn={handleUserDelete}
+                  />
                 )}
               </TableRow>
             </Link>

@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import InputRow from "./InputRow";
 import { useDispatch, useSelector } from "react-redux";
-import { closeModal } from "../features/modal/modalSlice";
+import { closeModal, hideOptionsModal } from "../features/modal/modalSlice";
 import { createUser, editUser, getUsersList } from "../features/user/UserSlice";
 import { ID } from "appwrite";
 import SubmitBtn from "./Buttons/SubmitBtn";
@@ -39,6 +39,7 @@ function UserForm() {
   // handleCloseModal
   function handleCloseModal() {
     dispatch(closeModal());
+    dispatch(hideOptionsModal());
   }
 
   // handleChange
@@ -85,7 +86,7 @@ function UserForm() {
           // if the user has been created successfully then add a company name (if new)
           postUserSuccess(
             "user created successfully!",
-            userInputState.userCompany
+            userInputState.userCompany.toLowerCase()
           );
         }
       })
@@ -102,7 +103,10 @@ function UserForm() {
     dispatch(editUser({ userId: selectedUser?.$id, ...userInputState }))
       .then((resp) => {
         if (editUser.fulfilled.match(resp)) {
-          postUserSuccess("updated successfully!", userInputState.userCompany);
+          postUserSuccess(
+            "updated successfully!",
+            userInputState.userCompany.toLowerCase()
+          );
         }
       })
       .catch((error) => {

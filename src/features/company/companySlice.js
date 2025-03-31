@@ -14,6 +14,8 @@ const initialState = {
 export const addCompanyIfNew = createAsyncThunk(
   "company/addCompanyIfNew",
   async (companyName, thunkAPI) => {
+    console.log(companyName);
+
     try {
       const resp = await databases.listDocuments(dbId, companyCollId, [
         Query.equal("companyName", companyName),
