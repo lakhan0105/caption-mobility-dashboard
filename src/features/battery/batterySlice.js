@@ -15,6 +15,8 @@ const initialState = {
   availableBatteries: null,
   batteryById: null,
   swapLoading: false,
+  isEditBattery: false,
+  selectedBattery: null,
 };
 
 // get all batteries list
@@ -188,10 +190,54 @@ export const swapBattery = createAsyncThunk(
   }
 );
 
+// editBatRegNum
+export const editBatRegNum = createAsyncThunk(
+  "battery/editBatRegNum",
+  async (data, thunkAPI) => {
+    const { $id, batRegNum } = data;
+
+    try {
+      const resp = await databases.updateDocument(dbId, batteriesCollId, $id, {
+        batRegNum,
+      });
+
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+// deleteBattery
+export const deleteBattery = createAsyncThunk(
+  "battery/deleteBattery",
+  async (batteryId, thunkAPI) => {
+    console.log(batteryId);
+    try {
+      const resp = await databases.deleteDocument(
+        dbId,
+        batteriesCollId,
+        batteryId
+      );
+
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
 const batterySlice = createSlice({
   name: "batteryReducer",
   initialState,
-  reducers: {},
+  reducers: {
+    setEditBattery(state, { payload }) {
+      state.isEditBattery = payload;
+    },
+    setSelectedBattery(state, { payload }) {
+      state.selectedBattery = payload;
+    },
+  },
   extraReducers(builder) {
     builder
       .addCase(getBatteriesList.pending, (state, action) => {
@@ -270,8 +316,33 @@ const batterySlice = createSlice({
         state.swapLoading = false;
         toast.error("error in swapBattery");
         console.log(payload);
+      })
+      .addCase(editBatRegNum.pending, (state, action) => {
+        state.isLoading = true;
+      })
+      .addCase(editBatRegNum.fulfilled, (state, { payload }) => {
+        state.isLoading = false;
+        toast.success("updated the battery details!");
+      })
+      .addCase(editBatRegNum.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        toast.error("error in editBatRegNum");
+        console.log(payload);
+      })
+      .addCase(deleteBattery.pending, (state, action) => {
+        state.isLoading = true;
+      })
+      .addCase(deleteBattery.fulfilled, (state, { payload }) => {
+        state.isLoading = false;
+        toast.success("deleted battery successfully!");
+      })
+      .addCase(deleteBattery.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        toast.error("error in deleteBattery");
+        console.log(payload);
       });
   },
 });
 
+export const { setEditBattery, setSelectedBattery } = batterySlice.actions;
 export default batterySlice.reducer;

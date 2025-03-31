@@ -1,17 +1,71 @@
 import React, { useEffect } from "react";
 import GenericTable from "./GenericTable";
 import TableHeader from "./TableHeader";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import TableRow from "./TableRow";
+import { SlOptionsVertical } from "react-icons/sl";
+import OptionsModal from "./OptionsModal";
+import {
+  hideOptionsModal,
+  setOptionsModalPosition,
+  showModal,
+  showOptionsModal,
+} from "../features/modal/modalSlice";
+
+import {
+  deleteBattery,
+  getBatteriesList,
+  setEditBattery,
+  setSelectedBattery,
+} from "../features/battery/batterySlice";
 
 function BatteriesTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
+  const { optionsModalState } = useSelector((state) => state.modalReducer);
+  const { selectedBattery } = useSelector((state) => state.batteryReducer);
+
+  const dispatch = useDispatch();
 
   const batteryTableHeadings = isMobile
     ? ["#", "batteryNum", "status"]
     : ["#", "batteryNum", "status"];
 
-  const batteryCols = isMobile ? "0.1fr 0.6fr 0.5fr" : "0.1fr 1fr 0.5fr ";
+  const batteryCols = isMobile
+    ? "0.1fr 0.6fr 0.5fr 0.05fr"
+    : "0.1fr 1fr 0.5fr ";
+
+  // handleOptionsBtn
+  function handleOptionsBtn(e, data) {
+    e.preventDefault();
+
+    if (optionsModalState) {
+      dispatch(hideOptionsModal());
+      dispatch(setEditBattery(false));
+    } else {
+      dispatch(showOptionsModal());
+      dispatch(setOptionsModalPosition({ x: e.clientX, y: e.clientY }));
+      dispatch(setSelectedBattery(data));
+    }
+  }
+
+  // handleEditBat
+  function handleEditBat(e) {
+    e.preventDefault();
+    dispatch(setEditBattery(true));
+    dispatch(showModal());
+  }
+
+  // handleDeleteBat
+  function handleDeleteBat(e) {
+    e.preventDefault();
+
+    dispatch(deleteBattery(selectedBattery?.$id))
+      .unwrap()
+      .then(() => {
+        dispatch(hideOptionsModal());
+        dispatch(getBatteriesList());
+      });
+  }
 
   return (
     <GenericTable>
@@ -48,6 +102,22 @@ function BatteriesTable({ data }) {
                   </p>
                 )}
               </div>
+
+              {/* OPTIONS BUTTON */}
+              <button
+                onClick={(e) => {
+                  handleOptionsBtn(e, item);
+                }}
+              >
+                <SlOptionsVertical />
+              </button>
+
+              {optionsModalState && (
+                <OptionsModal
+                  handleEditBtn={handleEditBat}
+                  handleDeleteBtn={handleDeleteBat}
+                />
+              )}
             </TableRow>
           );
         })}
