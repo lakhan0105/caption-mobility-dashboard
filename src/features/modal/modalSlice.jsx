@@ -7,6 +7,8 @@ const initialState = {
   isAssignForm: false,
   isSwapForm: false,
   isLoading: false,
+  optionsModalState: false,
+  optionsModalPosition: { x: "", y: "" },
 };
 
 const modalSlice = createSlice({
@@ -41,6 +43,17 @@ const modalSlice = createSlice({
     hideLoader(state) {
       state.isLoading = false;
     },
+    showOptionsModal(state) {
+      state.optionsModalState = true;
+    },
+    hideOptionsModal(state) {
+      state.optionsModalState = false;
+    },
+    setOptionsModalPosition(state, { payload }) {
+      console.log("running setoptionsmodalposition");
+      console.log(payload);
+      state.optionsModalPosition = payload;
+    },
   },
 });
 
@@ -53,5 +66,8 @@ export const {
   showSwapForm,
   showLoader,
   hideLoader,
+  showOptionsModal,
+  hideOptionsModal,
+  setOptionsModalPosition,
 } = modalSlice.actions;
 export default modalSlice.reducer;

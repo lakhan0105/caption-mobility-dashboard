@@ -22,9 +22,9 @@ function Bikes() {
     dispatch(getBikes());
   }, []);
 
-  if (isLoading) {
-    return <h2>Loading...</h2>;
-  }
+  // if (isLoading) {
+  //   return <h2>Loading...</h2>;
+  // }
 
   return (
     <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-0 pt-0">
@@ -40,7 +40,6 @@ function Bikes() {
 
         {/* bikes table */}
         {bikesList && <BikesTable data={bikesList} />}
-        {isLoading && <h2>Loading...</h2>}
 
         <Modal>
           <NewBikeForm />

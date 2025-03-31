@@ -1,14 +1,24 @@
-import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import { closeModal } from "../features/modal/modalSlice";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { closeModal, hideOptionsModal } from "../features/modal/modalSlice";
 import InputRow from "./InputRow";
 import SubmitBtn from "./Buttons/SubmitBtn";
-import { addBike, getBikes } from "../features/bike/bikeSlice";
+import { addBike, editBikeRegNum, getBikes } from "../features/bike/bikeSlice";
 
 function NewBikeForm() {
-  const dispatch = useDispatch();
+  const { isEditBike, selectedBike } = useSelector(
+    (state) => state.bikeReducer
+  );
 
+  const dispatch = useDispatch();
   const [userInputState, setUserInputState] = useState({ bikeRegNum: "" });
+
+  useEffect(() => {
+    if (isEditBike) {
+      console.log("is edit bike is true");
+      setUserInputState({ bikeRegNum: selectedBike?.bikeRegNum });
+    }
+  }, []);
 
   function handleChange(e) {
     const key = e.target.name;
@@ -35,10 +45,28 @@ function NewBikeForm() {
       });
   }
 
+  // handleEditBike
+  function handleEditBike(e) {
+    e.preventDefault();
+
+    dispatch(
+      editBikeRegNum({
+        bikeId: selectedBike?.$id,
+        bikeRegNum: userInputState?.bikeRegNum,
+      })
+    )
+      .unwrap()
+      .then(() => {
+        dispatch(closeModal());
+        dispatch(hideOptionsModal());
+        dispatch(getBikes());
+      });
+  }
+
   return (
     <form
       className="bg-white w-full max-w-[400px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative"
-      onSubmit={handleAddNewBike}
+      onSubmit={!isEditBike ? handleAddNewBike : handleEditBike}
     >
       <button
         className="absolute right-4 top-4 cursor-pointer"
@@ -59,7 +87,7 @@ function NewBikeForm() {
         required={true}
       />
 
-      <SubmitBtn text={"create a new bike"} />
+      <SubmitBtn text={isEditBike ? "update" : "create a new bike"} />
     </form>
   );
 }
