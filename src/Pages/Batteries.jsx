@@ -6,7 +6,10 @@ import {
   PageHeader,
 } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
-import { getBatteriesList } from "../features/battery/batterySlice";
+import {
+  getBatteriesList,
+  setEditBattery,
+} from "../features/battery/batterySlice";
 import { showModal } from "../features/modal/modalSlice";
 import { GiBatteries } from "react-icons/gi";
 
@@ -26,6 +29,7 @@ function Batteries() {
           heading={"Batteries"}
           btnName={"+ add new battery"}
           handleFunction={() => {
+            dispatch(setEditBattery(false));
             dispatch(showModal());
           }}
           icon={<GiBatteries />}

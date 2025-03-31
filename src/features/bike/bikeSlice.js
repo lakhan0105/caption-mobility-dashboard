@@ -117,6 +117,7 @@ export const editBikeRegNum = createAsyncThunk(
   "bike/editBikeRegNum",
   async (data, thunkAPI) => {
     const { bikeId, bikeRegNum } = data;
+
     console.log(data);
     try {
       const resp = await databases.updateDocument(dbId, bikesCollId, bikeId, {

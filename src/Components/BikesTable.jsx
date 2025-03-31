@@ -22,9 +22,7 @@ import toast from "react-hot-toast";
 function BikesTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
   const { selectedBike, isLoading } = useSelector((state) => state.bikeReducer);
-  const { optionsModalState, optionsModalPosition } = useSelector(
-    (state) => state.modalReducer
-  );
+  const { optionsModalState } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
 
   // data to pass in tableHeader and body
