@@ -93,6 +93,26 @@ export const editUser = createAsyncThunk(
   }
 );
 
+// toggleUserBlock
+// - accepts a userId, isBlocked and userNotes(if he is going to get blocked)
+// - if isBlocked === true -> unblock the user
+// - if isBlocked === false -> block the user
+export const toggleUserBlock = createAsyncThunk(
+  "toggleUserBlock",
+  async ({ userId, isBlocked, userNotes }, thunkAPI) => {
+    try {
+      const resp = await databases.updateDocument(dbId, usersCollId, userId, {
+        isBlocked,
+        userNotes: isBlocked ? userNotes : null,
+      });
+
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
 // getUserProfile
 export const getUserProfile = createAsyncThunk(
   "user/getUserProfile",
@@ -529,6 +549,23 @@ const userSlice = createSlice({
       .addCase(editUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
         console.log("error in user/editUser");
+        console.log(payload);
+      })
+      .addCase(toggleUserBlock.pending, (state) => {
+        state.isUserLoading = true;
+      })
+      .addCase(toggleUserBlock.fulfilled, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log(payload.isBlocked);
+        if (payload.isBlocked) {
+          toast.success("blocked the user successfully!");
+        } else {
+          toast.success("unblocked the user successfully!");
+        }
+      })
+      .addCase(toggleUserBlock.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        console.log("error in user/toggleUserBlock");
         console.log(payload);
       });
   },

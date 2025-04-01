@@ -8,6 +8,7 @@ const initialState = {
   isSwapForm: false,
   isLoading: false,
   optionsModalState: false,
+  isBlockForm: false,
   optionsModalPosition: { x: "", y: "" },
 };
 
@@ -54,6 +55,9 @@ const modalSlice = createSlice({
       console.log(payload);
       state.optionsModalPosition = payload;
     },
+    setIsBlockFrom(state, { payload }) {
+      state.isBlockForm = payload;
+    },
   },
 });
 
@@ -69,5 +73,7 @@ export const {
   showOptionsModal,
   hideOptionsModal,
   setOptionsModalPosition,
+  setIsBlockFrom,
 } = modalSlice.actions;
+
 export default modalSlice.reducer;

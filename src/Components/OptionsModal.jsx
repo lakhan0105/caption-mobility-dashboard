@@ -2,9 +2,12 @@ import React, { useEffect, useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { FaTrashAlt } from "react-icons/fa";
 import { useSelector } from "react-redux";
+import { MdBlockFlipped } from "react-icons/md";
 
-function OptionsModal({ handleEditBtn, handleDeleteBtn }) {
+function OptionsModal({ handleEditBtn, handleDeleteBtn, handleBlockBtn }) {
   const { optionsModalPosition } = useSelector((state) => state.modalReducer);
+
+  const { selectedUser } = useSelector((state) => state.userReducer);
 
   useEffect(() => {
     console.log(optionsModalPosition);
@@ -12,7 +15,7 @@ function OptionsModal({ handleEditBtn, handleDeleteBtn }) {
 
   return (
     <div
-      className={`min-h-[70px] w-[100px] px-3 p-2 rounded shadow bg-white absolute flex flex-col justify-around text-zinc-700`}
+      className={`min-h-[70px] w-[100px] px-3 p-2 rounded shadow bg-white absolute flex flex-col justify-around gap-2 text-zinc-700`}
       style={{
         left: `${optionsModalPosition.x - 110}px`,
         top: `${optionsModalPosition.y - 80}px`,
@@ -41,6 +44,23 @@ function OptionsModal({ handleEditBtn, handleDeleteBtn }) {
         </span>
         delete
       </button>
+
+      {/* BLOCK/UNBLOCK BUTTON */}
+      {/* 
+          - this button opens a blockForm from where we can block/unblock the user
+          - handleBlockBtn -> opens a block form
+      */}
+      {handleBlockBtn && (
+        <button
+          className="capitalize flex items-center gap-1.5 text-xs"
+          onClick={handleBlockBtn}
+        >
+          <span className="text-xs">
+            <MdBlockFlipped />
+          </span>
+          {selectedUser?.isBlocked ? "unblock" : "block"}
+        </button>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import AssignForm from "./AssignForm";
 import AuthBtn from "./AuthBtn";
 import BatteriesTable from "./BatteriesTable";
 import BikesTable from "./BikesTable";
+import BlockForm from "./BlockForm";
 import EditPaymentForm from "./EditPaymentForm";
 import Filters from "./Filters";
 import GenericTable from "./GenericTable";
@@ -54,4 +55,5 @@ export {
   Filters,
   OptionsModal,
   SwapInfoCard,
+  BlockForm,
 };
