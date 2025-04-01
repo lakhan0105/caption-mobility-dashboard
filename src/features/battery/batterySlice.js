@@ -121,6 +121,8 @@ export const swapBattery = createAsyncThunk(
     const { oldBatteryId, newBatteryId, userId, totalSwapCount, isBlocked } =
       data;
 
+    console.log(data);
+
     try {
       // if isBlocked === true, then do not allow swapping
       if (isBlocked) {
@@ -175,16 +177,24 @@ export const swapBattery = createAsyncThunk(
 
       // add the record in the record collection
       // also increase the swap count here
-      await thunkAPI.dispatch(
-        addRecord({
-          ...data,
-          totalSwapCount: totalSwapCount + 1,
-          swapDate: new Date(),
-        })
-      );
+
+      await thunkAPI
+        .dispatch(
+          addRecord({
+            newBatRegNum: data?.newBatRegNum,
+            newBatteryId: data?.newBatteryId,
+            oldBatRegNum: data?.oldBatRegNum,
+            oldBatteryId: data?.oldBatteryId,
+            userId: data?.userId,
+            userName: data?.userName,
+            totalSwapCount: totalSwapCount + 1,
+            swapDate: new Date(),
+          })
+        )
+        .unwrap();
 
       // increment the daily swaps collection
-      await thunkAPI.dispatch(incrementDailySwapCount());
+      await thunkAPI.dispatch(incrementDailySwapCount()).unwrap();
 
       return { success: true };
     } catch (error) {
