@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import {
+  BlockForm,
   Filters,
   Modal,
   PageHeader,
@@ -14,12 +15,18 @@ import {
   getUsersList,
   setEditUser,
 } from "../features/user/UserSlice";
-import { hideOptionsModal, showModal } from "../features/modal/modalSlice";
+import {
+  hideOptionsModal,
+  setIsBlockFrom,
+  showModal,
+} from "../features/modal/modalSlice";
 
 function Users() {
   const { usersList, isUserLoading } = useSelector(
     (state) => state.userReducer
   );
+
+  const { isBlockForm } = useSelector((state) => state.modalReducer);
 
   const dispatch = useDispatch();
 
@@ -29,10 +36,15 @@ function Users() {
     }
 
     dispatch(hideOptionsModal());
+
+    console.log(isBlockForm);
   }, []);
 
   // open the modal when clicked on add new user
   function handleNewUser() {
+    // hide the block Form if it is rendering in the place of userForm
+    dispatch(setIsBlockFrom(false));
+
     // set the isEditUser to false
     dispatch(setEditUser(false));
 
@@ -67,7 +79,11 @@ function Users() {
         )}
 
         <Modal>
-          <UserForm />
+          {/* <UserForm />
+
+          <BlockForm /> */}
+
+          {isBlockForm ? <BlockForm /> : <UserForm />}
         </Modal>
       </div>
     </section>

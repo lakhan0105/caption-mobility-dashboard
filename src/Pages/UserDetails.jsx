@@ -71,7 +71,7 @@ function UserDetails() {
   }
 
   if (userDetails) {
-    const { $id, userName, userRegisterId } = userDetails;
+    const { $id, userName, userRegisterId, isBlocked, userNotes } = userDetails;
 
     return (
       <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">

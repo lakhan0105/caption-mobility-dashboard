@@ -11,6 +11,7 @@ import { SlOptionsVertical } from "react-icons/sl";
 
 import {
   hideOptionsModal,
+  setIsBlockFrom,
   setOptionsModalPosition,
   showModal,
   showOptionsModal,
@@ -74,6 +75,16 @@ function UsersTable({ data }) {
         dispatch(getUsersList());
         dispatch(hideOptionsModal());
       });
+  }
+
+  // openBlockModal
+  // - opens a modal that accepts reason why the user is blocked
+  function openBlockModal(e) {
+    e.preventDefault();
+    console.log(selectedUser);
+    dispatch(setIsBlockFrom(true));
+    dispatch(showModal());
+    dispatch(hideOptionsModal());
   }
 
   return (
@@ -164,6 +175,7 @@ function UsersTable({ data }) {
                   <OptionsModal
                     handleEditBtn={showEditForm}
                     handleDeleteBtn={handleUserDelete}
+                    handleBlockBtn={openBlockModal}
                   />
                 )}
               </TableRow>

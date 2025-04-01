@@ -48,8 +48,15 @@ function SwapForm({ userDetails, getUser }) {
     // options for active users
     setOptions(
       activeUsers?.map((user) => {
-        const { $id, userName, batteryId, totalSwapCount, pendingAmount } =
-          user;
+        const {
+          $id,
+          userName,
+          batteryId,
+          totalSwapCount,
+          pendingAmount,
+          isBlocked,
+          userNotes,
+        } = user;
         return {
           value: $id,
           $id,
@@ -58,6 +65,8 @@ function SwapForm({ userDetails, getUser }) {
           userName,
           totalSwapCount,
           pendingAmount,
+          isBlocked,
+          userNotes,
         };
       })
     );
@@ -91,6 +100,7 @@ function SwapForm({ userDetails, getUser }) {
     const newBatRegNum = selectedBattery?.batRegNum;
     const oldBatRegNum = oldBatteryDetails?.batRegNum;
     const totalSwapCount = swapCount; // from user data
+    const isBlocked = userDetails?.isBlocked || selectedUser?.isBlocked;
 
     try {
       await dispatch(
@@ -102,6 +112,7 @@ function SwapForm({ userDetails, getUser }) {
           oldBatRegNum,
           newBatRegNum,
           totalSwapCount,
+          isBlocked,
         })
       ).unwrap();
 
@@ -174,36 +185,53 @@ function SwapForm({ userDetails, getUser }) {
             </div>
           )}
 
+          {/* REASON FOR BLOCK (When userdetails are not passed, and swap is made from /swaps route)*/}
+          {selectedUser?.isBlocked === true && (
+            <h4 className="text-red-700 mb-3 text-[13px] leading-relaxed">
+              This user is blocked because :{" "}
+              <span className="underline">
+                {userDetails?.userNotes || selectedUser?.userNotes}
+              </span>
+              <br />
+              please contact caption mobility
+            </h4>
+          )}
+
           {/* INPUT TO SELECT THE USER */}
+          <>
+            <label htmlFor="bike">Select user</label>
 
-          <label htmlFor="bike">Select user</label>
+            <Select
+              options={options}
+              value={options?.find(
+                (option) => option.value === selectedUser?.$id
+              )}
+              onChange={(user) => {
+                // grab the batteryId from the selected input
+                const { batteryId } = user;
+                if (user) {
+                  setSelectedUser(user);
+                  console.log(user);
+                }
 
-          <Select
-            options={options}
-            value={options?.find(
-              (option) => option.value === selectedUser?.$id
-            )}
-            onChange={(user) => {
-              // grab the batteryId from the selected input
-              const { batteryId } = user;
-              if (user) {
-                setSelectedUser(user);
-              }
-
-              // run the getBatteryById only when the batteryId is present or else the swapForm component re-renders and the selected user also resets
-              if (batteryId) {
-                handleOldBatteryDetails(batteryId);
-              }
-            }}
-          />
+                // run the getBatteryById only when the batteryId is present or else the swapForm component re-renders and the selected user also resets
+                if (batteryId) {
+                  handleOldBatteryDetails(batteryId);
+                }
+              }}
+            />
+          </>
         </div>
       )}
 
       {/* WITH USER DETAILS */}
       {/* if userDetails is passed show the name of that user in swapform */}
-      {userDetails && <h3 className="font-medium">{userDetails?.userName}</h3>}
+      {userDetails && (
+        <h3 className="font-medium capitalize text-zinc-600">
+          {userDetails?.userName}
+        </h3>
+      )}
 
-      {/* SELECT INPUT FOR BATTERY  */}
       <div className="leading-loose">
         {/* check and show the pending payment details of the user*/}
         {userDetails?.pendingAmount > 0 && (
@@ -215,13 +243,35 @@ function SwapForm({ userDetails, getUser }) {
           </div>
         )}
 
-        <label htmlFor="bike">Select Battery</label>
-        <Select
-          options={batteryOptions}
-          onChange={(battery) => {
-            setSelectedBattery(battery);
-          }}
-        />
+        {/*  */}
+        {/* BLOCK REASON (When the userDetails is passed, which means the swap is made from the user profile page) */}
+        {userDetails?.isBlocked === true && (
+          <h4 className="text-red-700 mb-3 text-[13px] leading-relaxed">
+            This user is blocked because :{" "}
+            <span className="underline">
+              {userDetails?.userNotes || selectedUser?.userNotes}
+            </span>
+            <br />
+            please contact caption mobility
+          </h4>
+        )}
+
+        {/*  */}
+        {/* SELECT BATTERY */}
+        {/* do not show if the userDetails or selecetdUser isblocked
+         */}
+        {(userDetails?.isBlocked === false ||
+          selectedUser?.isBlocked === false) && (
+          <div>
+            <label htmlFor="bike">Select Battery</label>
+            <Select
+              options={batteryOptions}
+              onChange={(battery) => {
+                setSelectedBattery(battery);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <SubmitBtn

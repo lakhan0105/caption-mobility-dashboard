@@ -118,9 +118,16 @@ export const updateBattery = createAsyncThunk(
 export const swapBattery = createAsyncThunk(
   "user/swapBatteryToUser",
   async (data, thunkAPI) => {
-    const { oldBatteryId, newBatteryId, userId, totalSwapCount } = data;
+    const { oldBatteryId, newBatteryId, userId, totalSwapCount, isBlocked } =
+      data;
 
     try {
+      // if isBlocked === true, then do not allow swapping
+      if (isBlocked) {
+        toast.error("the user is blocked");
+        return thunkAPI.rejectWithValue("the user is blocked!");
+      }
+
       // battery collection
       // return the old battery document
       // - change battery status to available
@@ -401,7 +408,7 @@ const batterySlice = createSlice({
       })
       .addCase(getTodaySwapCount.fulfilled, (state, { payload }) => {
         state.isLoading = false;
-        state.todaySwapCount = payload.documents[0].todaySwapCount;
+        state.todaySwapCount = payload?.documents[0]?.todaySwapCount;
       })
       .addCase(getTodaySwapCount.rejected, (state, { payload }) => {
         state.isLoading = false;
