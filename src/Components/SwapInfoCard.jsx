@@ -35,7 +35,7 @@ function SwapInfoCard({ record }) {
             {newBatRegNum}
 
             {/* totalswapcount */}
-            <h4 className="text-[11px]">(swap number {totalSwapCount})</h4>
+            <p className="text-[11px]">(swap number {totalSwapCount})</p>
           </h4>
 
           {/* date of swap information */}
