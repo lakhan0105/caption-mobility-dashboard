@@ -1,119 +1,100 @@
-import React, { useEffect } from "react";
-import { Modal, PageHeader, SwapForm } from "../Components";
-import { PiSwapBold } from "react-icons/pi";
+import React, { useEffect, useState } from "react";
+import { Modal, PageHeader, SwapForm, SwapInfoCard } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
+import { getAllRecords, getTodayRecord } from "../features/record/recordSlice";
+import { PiSwap } from "react-icons/pi";
+
+import {
+  getTodaySwapCount,
+  swapBattery,
+} from "../features/battery/batterySlice";
+import SwapPageTabs from "../Components/Tabs/SwapPageTabs";
 import { showModal } from "../features/modal/modalSlice";
-import { getAllRecords } from "../features/record/recordSlice";
-
-import { FaArrowRightLong } from "react-icons/fa6";
-import { IoCalendar } from "react-icons/io5";
-import { AiFillClockCircle } from "react-icons/ai";
-
-import { nanoid } from "nanoid";
-import moment from "moment/moment";
-import { swapBattery } from "../features/battery/batterySlice";
 
 function Swaps() {
   const dispatch = useDispatch();
 
   // get the records state from recordReducer
-  const { isLoading, records } = useSelector((state) => state.recordReducer);
+  const { isLoading, records, todayRecords } = useSelector(
+    (state) => state.recordReducer
+  );
+
+  const { todaySwapCount } = useSelector((state) => state.batteryReducer);
+
+  // tabs
+  const tabHeadingsData = [
+    { id: 1, name: "today", label: "today" },
+    { id: 2, name: "all", label: "all swaps" },
+  ];
+
+  const [activeTab, setActiveTab] = useState(tabHeadingsData[0].name);
+
+  function handleActiveTab(e) {
+    const name = e.target.name;
+    setActiveTab(name);
+  }
 
   // run the func to load the records when the page loads
   useEffect(() => {
-    dispatch(getAllRecords());
-  }, [dispatch, swapBattery]);
+    dispatch(getTodaySwapCount());
+
+    if (activeTab === "today") {
+      dispatch(getTodayRecord());
+    } else if (activeTab === "all") {
+      dispatch(getAllRecords());
+    }
+  }, [dispatch, swapBattery, activeTab]);
 
   return (
     <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-0 pt-0 z-40">
       {/* PAGE HEADER */}
       <PageHeader
         heading={"swaps"}
-        btnName={"swap"}
         handleFunction={() => {
           dispatch(showModal());
         }}
-        icon={<PiSwapBold />}
-      />
+      >
+        <h3 className="text-xs text-zinc-100/90 pl-1 flex items-center gap-1">
+          <span>{todaySwapCount <= 0 ? 0 : todaySwapCount}</span> swaps today
+          <>
+            <PiSwap />
+          </>
+        </h3>
 
-      {isLoading && <h2 className="text-center">Loading...</h2>}
+        <SwapPageTabs
+          tabHeadingsData={tabHeadingsData}
+          activeTab={activeTab}
+          handleActiveTab={handleActiveTab}
+        />
+      </PageHeader>
 
-      {/* MAIN CONTENT */}
+      {/* SWAP TAB CONTENT */}
       <div className="px-5 py-2 ">
-        {records?.map((record) => {
-          const {
-            userId,
-            userName,
-            oldBatRegNum,
-            newBatRegNum,
-            oldBatteryId,
-            newBatteryId,
-            swapDate,
-            totalSwapCount,
-          } = record;
+        {activeTab === "today" && (
+          <>
+            {/* RENDER TODAY'S SWAP RECORDS */}
+            {isLoading ? (
+              <h2 className="text-center">loading...</h2>
+            ) : (
+              todayRecords?.map((record) => {
+                return <SwapInfoCard key={record?.swapDate} record={record} />;
+              })
+            )}
+          </>
+        )}
 
-          return (
-            <article className="flex justify-between mb-12" key={nanoid()}>
-              {/* LEFT */}
-              <div className="flex gap-4">
-                {/* dot element */}
-                <div className="flex flex-col items-center relative">
-                  <div className="w-[12.5px] h-[12.5px] bg-red-400 rounded-lg mt-1.5"></div>
-
-                  {/* line */}
-                  <div className="w-[1px] h-[95px] bg-red-400 absolute bottom-0 top-6"></div>
-                </div>
-
-                {/* user swap information */}
-                <div>
-                  <h3 className="text-md font-semibold">{userName}</h3>
-
-                  {/* battery swap information */}
-                  <h4 className="italic text-xs flex items-center gap-2 tracking-wider uppercase">
-                    {oldBatRegNum}
-                    <span>
-                      <FaArrowRightLong />
-                    </span>
-                    {newBatRegNum}
-
-                    {/* totalswapcount */}
-                    <h4 className="text-xs">(swap number {totalSwapCount})</h4>
-                  </h4>
-
-                  {/* date of swap information */}
-                  <div className="mt-2.5 text-gray-600 flex gap-4">
-                    {/* day */}
-                    <div className="flex items-center gap-1 text-sm">
-                      <span className="translate-x-[-1]">
-                        <IoCalendar />
-                      </span>
-
-                      <p className="text-xs mt-0.5">
-                        {moment(swapDate).format("ll")}
-                      </p>
-                    </div>
-
-                    {/* time */}
-                    <div className="flex items-center gap-1 text-sm">
-                      <span className="translate-x-[-1]">
-                        <AiFillClockCircle />
-                      </span>
-
-                      <p className="text-xs mt-0.5">
-                        {moment(swapDate).format("LT")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* RIGHT */}
-              <div>
-                <button>view</button>
-              </div>
-            </article>
-          );
-        })}
+        {activeTab === "all" && (
+          <>
+            {/* RENDER ALL SWAP RECORDS */}
+            {isLoading ? (
+              <h2 className="text-center">Loading...</h2>
+            ) : (
+              records?.map((record) => {
+                return <SwapInfoCard key={record?.swapDate} record={record} />;
+              })
+            )}
+          </>
+        )}
       </div>
 
       <Modal>

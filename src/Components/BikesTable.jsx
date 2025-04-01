@@ -63,6 +63,7 @@ function BikesTable({ data }) {
       toast.error(
         "The bike is active and cannot be delete! please make it inactive"
       );
+      return;
     }
 
     dispatch(deleteBike(selectedBike?.$id))

@@ -7,6 +7,7 @@ import { addRecord } from "../record/recordSlice";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const batteriesCollId = import.meta.env.VITE_BATTERIES_COLL_ID;
+const dailySwapRecordCollId = import.meta.env.VITE_DAILY_SWAP_RECORD_COLL_ID;
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 
 const initialState = {
@@ -17,6 +18,7 @@ const initialState = {
   swapLoading: false,
   isEditBattery: false,
   selectedBattery: null,
+  todaySwapCount: null,
 };
 
 // get all batteries list
@@ -79,7 +81,6 @@ export const getAvailableBatteries = createAsyncThunk(
         Query.equal("batStatus", [false]),
       ]);
       console.log("available batteries ...");
-      console.log(resp);
 
       return resp;
     } catch (error) {
@@ -117,15 +118,7 @@ export const updateBattery = createAsyncThunk(
 export const swapBattery = createAsyncThunk(
   "user/swapBatteryToUser",
   async (data, thunkAPI) => {
-    console.log("data in swap battery:", data);
-    const {
-      oldBatteryId,
-      newBatteryId,
-      userId,
-      oldBatRegNum,
-      newBatRegNum,
-      totalSwapCount,
-    } = data;
+    const { oldBatteryId, newBatteryId, userId, totalSwapCount } = data;
 
     try {
       // battery collection
@@ -183,7 +176,69 @@ export const swapBattery = createAsyncThunk(
         })
       );
 
+      // increment the daily swaps collection
+      await thunkAPI.dispatch(incrementDailySwapCount());
+
       return { success: true };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+export const incrementDailySwapCount = createAsyncThunk(
+  "battery/incrementDailySwapCount",
+  async (_, thunkAPI) => {
+    const today = new Date().toDateString();
+    console.log(today);
+
+    try {
+      // check if a doc with today's day is already present
+      // - if yes then, update its todaySwapCount
+      // - if no then, create a new doc with today's date
+      const resp = await databases.listDocuments(dbId, dailySwapRecordCollId, [
+        Query.equal("todayDate", today),
+      ]);
+
+      if (resp.documents.length > 0) {
+        const docId = resp.documents[0].$id;
+        const todaySwapCount = resp.documents[0].todaySwapCount;
+
+        const updatedDoc = await databases.updateDocument(
+          dbId,
+          dailySwapRecordCollId,
+          docId,
+          { todaySwapCount: todaySwapCount + 1 }
+        );
+
+        return updatedDoc;
+      } else {
+        const newDoc = await databases.createDocument(
+          dbId,
+          dailySwapRecordCollId,
+          ID.unique(),
+          { todayDate: today, todaySwapCount: 1 }
+        );
+
+        return newDoc;
+      }
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+export const getTodaySwapCount = createAsyncThunk(
+  "battery/getTodaySwapCount",
+  async (_, thunkAPI) => {
+    const today = new Date().toDateString();
+
+    try {
+      const resp = await databases.listDocuments(dbId, dailySwapRecordCollId, [
+        Query.equal("todayDate", today),
+      ]);
+
+      return resp;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
@@ -339,6 +394,18 @@ const batterySlice = createSlice({
       .addCase(deleteBattery.rejected, (state, { payload }) => {
         state.isLoading = false;
         toast.error("error in deleteBattery");
+        console.log(payload);
+      })
+      .addCase(getTodaySwapCount.pending, (state, action) => {
+        state.isLoading = true;
+      })
+      .addCase(getTodaySwapCount.fulfilled, (state, { payload }) => {
+        state.isLoading = false;
+        state.todaySwapCount = payload.documents[0].todaySwapCount;
+      })
+      .addCase(getTodaySwapCount.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        toast.error("error in getTodaySwapCount");
         console.log(payload);
       });
   },
