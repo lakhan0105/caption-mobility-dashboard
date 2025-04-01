@@ -10,6 +10,7 @@ console.log(recordCollId);
 const initialState = {
   isLoading: null,
   records: null,
+  todayRecords: null,
 };
 
 // add the record after the swap is completed
@@ -45,6 +46,26 @@ export const getAllRecords = createAsyncThunk(
   }
 );
 
+// todayRecord (returns today's documents from records collection)
+export const getTodayRecord = createAsyncThunk(
+  "record/todayRecord",
+  async (_, thunkAPI) => {
+    const today = new Date();
+    const startDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+    const endDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
+
+    try {
+      const resp = await databases.listDocuments(dbId, recordCollId, [
+        Query.between("swapDate", startDay, endDay),
+      ]);
+
+      return resp;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
 const recordSlice = createSlice({
   name: "record",
   initialState,
@@ -72,6 +93,18 @@ const recordSlice = createSlice({
       .addCase(getAllRecords.rejected, (state, { payload }) => {
         state.isLoading = false;
         alert("error in record/getAllRecords");
+        console.log(payload);
+      })
+      .addCase(getTodayRecord.pending, (state, { payload }) => {
+        state.isLoading = true;
+      })
+      .addCase(getTodayRecord.fulfilled, (state, { payload }) => {
+        state.isLoading = false;
+        state.todayRecords = payload.documents;
+      })
+      .addCase(getTodayRecord.rejected, (state, { payload }) => {
+        state.isLoading = false;
+        alert("error in record/getTodayRecord");
         console.log(payload);
       });
   },

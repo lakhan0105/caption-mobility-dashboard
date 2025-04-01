@@ -90,9 +90,7 @@ function SwapForm({ userDetails, getUser }) {
     const newBatteryId = selectedBattery?.$id;
     const newBatRegNum = selectedBattery?.batRegNum;
     const oldBatRegNum = oldBatteryDetails?.batRegNum;
-    const totalSwapCount = swapCount;
-
-    console.log(totalSwapCount);
+    const totalSwapCount = swapCount; // from user data
 
     try {
       await dispatch(
@@ -108,6 +106,8 @@ function SwapForm({ userDetails, getUser }) {
       ).unwrap();
 
       dispatch(closeModal());
+
+      // if the swap form is in the userDetails page, then update his details
       if (userDetails) {
         getUser();
       }

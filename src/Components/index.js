@@ -18,6 +18,7 @@ import PageHeader from "./PageHeader";
 import ProfileRow from "./ProfileRow";
 import SearchBar from "./SearchBar";
 import SwapForm from "./SwapForm";
+import SwapInfoCard from "./SwapInfoCard";
 import TableHeader from "./TableHeader";
 import TableRow from "./TableRow";
 import ToggleSidebar from "./ToggleSidebar";
@@ -52,4 +53,5 @@ export {
   SearchBar,
   Filters,
   OptionsModal,
+  SwapInfoCard,
 };
