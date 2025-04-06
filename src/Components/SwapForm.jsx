@@ -11,7 +11,6 @@ import {
   swapBattery,
 } from "../features/battery/batterySlice";
 
-import Select from "react-select";
 import { getActiveUsers } from "../features/user/UserSlice";
 import ScannerComp from "./ScannerComp";
 import toast from "react-hot-toast";
@@ -27,8 +26,9 @@ function SwapForm({ userDetails, getUser }) {
   }, []);
 
   // get the list of available batteries
-  const { availableBatteries, isLoading, swapLoading, batteryById } =
-    useSelector((state) => state.batteryReducer);
+  const { isLoading, swapLoading, batteryById } = useSelector(
+    (state) => state.batteryReducer
+  );
 
   // get the list of active users
   const { activeUsers, isUserLoading } = useSelector(
@@ -151,12 +151,19 @@ function SwapForm({ userDetails, getUser }) {
   }
 
   // handleScanNewBattery
+  // - gets the battery details after scanning
+  // - sets the batteryById state in batterySlice (it contains the battery information)
+  // - we set the selectedBattery in this component to the battery details from batterySlice
   function handleScanNewBattery(newBatteryId) {
-    // if(selectedUser?.$id )
-
-    // run the function to get the battery details by id
-    dispatch(getBatteryById(newBatteryId));
-    setSelectedBattery(batteryById);
+    dispatch(getBatteryById(newBatteryId))
+      .unwrap()
+      .then((batteryInfo) => {
+        setSelectedBattery(batteryInfo);
+      })
+      .catch((err) => {
+        console.log("Error fetching battery:", err);
+        toast.error("Failed to scan new battery");
+      });
   }
 
   useEffect(() => {
@@ -180,6 +187,8 @@ function SwapForm({ userDetails, getUser }) {
         className="absolute right-4 top-4 cursor-pointer text-2xl"
         onClick={() => {
           dispatch(closeModal());
+          setSelectedBattery(null);
+          setSelectedUser(null);
         }}
       >
         <IoClose />

@@ -33,6 +33,7 @@ function ScannerComp({
       // if scanNewBattery === true, then run different code
       if (scanNewBattery) {
         handleScanNewBattery(batteryId);
+        console.log("new", batteryId);
         return;
       }
 
