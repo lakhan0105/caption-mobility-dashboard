@@ -7,6 +7,7 @@ import { SlOptionsVertical } from "react-icons/sl";
 import OptionsModal from "./OptionsModal";
 import {
   hideOptionsModal,
+  setIsQrCodeComp,
   setOptionsModalPosition,
   showModal,
   showOptionsModal,
@@ -49,6 +50,7 @@ function BatteriesTable({ data }) {
   }
 
   // handleEditBat
+  // opens a modal to edit the battery details
   function handleEditBat(e) {
     e.preventDefault();
     dispatch(setEditBattery(true));
@@ -65,6 +67,19 @@ function BatteriesTable({ data }) {
         dispatch(hideOptionsModal());
         dispatch(getBatteriesList());
       });
+  }
+
+  // handleDownloadQr
+  // - runs when get qr button is clicked
+  function openQrCodeComp(e) {
+    e.preventDefault();
+    console.log("download qr code");
+    console.log(selectedBattery);
+
+    // generate a qr code and download
+    dispatch(setIsQrCodeComp(true));
+    dispatch(showModal());
+    dispatch(hideOptionsModal());
   }
 
   return (
@@ -116,6 +131,7 @@ function BatteriesTable({ data }) {
                 <OptionsModal
                   handleEditBtn={handleEditBat}
                   handleDeleteBtn={handleDeleteBat}
+                  openQrCodeComp={openQrCodeComp}
                 />
               )}
             </TableRow>

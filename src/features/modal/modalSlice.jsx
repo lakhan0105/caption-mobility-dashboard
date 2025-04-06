@@ -9,6 +9,7 @@ const initialState = {
   isLoading: false,
   optionsModalState: false,
   isBlockForm: false,
+  isQrCodeComp: false,
   optionsModalPosition: { x: "", y: "" },
 };
 
@@ -58,6 +59,9 @@ const modalSlice = createSlice({
     setIsBlockFrom(state, { payload }) {
       state.isBlockForm = payload;
     },
+    setIsQrCodeComp(state, { payload }) {
+      state.isQrCodeComp = payload;
+    },
   },
 });
 
@@ -74,6 +78,7 @@ export const {
   hideOptionsModal,
   setOptionsModalPosition,
   setIsBlockFrom,
+  setIsQrCodeComp,
 } = modalSlice.actions;
 
 export default modalSlice.reducer;

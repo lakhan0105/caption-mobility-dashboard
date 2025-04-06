@@ -3,8 +3,14 @@ import { FaEdit } from "react-icons/fa";
 import { FaTrashAlt } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import { MdBlockFlipped } from "react-icons/md";
+import { TbDownload } from "react-icons/tb";
 
-function OptionsModal({ handleEditBtn, handleDeleteBtn, handleBlockBtn }) {
+function OptionsModal({
+  handleEditBtn,
+  handleDeleteBtn,
+  handleBlockBtn,
+  openQrCodeComp,
+}) {
   const { optionsModalPosition } = useSelector((state) => state.modalReducer);
 
   const { selectedUser } = useSelector((state) => state.userReducer);
@@ -59,6 +65,19 @@ function OptionsModal({ handleEditBtn, handleDeleteBtn, handleBlockBtn }) {
             <MdBlockFlipped />
           </span>
           {selectedUser?.isBlocked ? "unblock" : "block"}
+        </button>
+      )}
+
+      {/* DOWNLOAD QR CODE BUTTON */}
+      {openQrCodeComp && (
+        <button
+          className="capitalize flex items-center gap-1.5 text-xs"
+          onClick={openQrCodeComp}
+        >
+          <span className="text-xs">
+            <TbDownload />
+          </span>
+          get QR
         </button>
       )}
     </div>

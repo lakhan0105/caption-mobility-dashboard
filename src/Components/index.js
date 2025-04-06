@@ -17,6 +17,8 @@ import NewBikeForm from "./NewBikeForm";
 import OptionsModal from "./OptionsModal";
 import PageHeader from "./PageHeader";
 import ProfileRow from "./ProfileRow";
+import QrCodeComp from "./QrCodeComp";
+import ScannerComp from "./ScannerComp";
 import SearchBar from "./SearchBar";
 import SwapForm from "./SwapForm";
 import SwapInfoCard from "./SwapInfoCard";
@@ -56,4 +58,6 @@ export {
   OptionsModal,
   SwapInfoCard,
   BlockForm,
+  QrCodeComp,
+  ScannerComp,
 };
