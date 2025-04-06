@@ -4,6 +4,7 @@ import {
   Modal,
   NewBatteryForm,
   PageHeader,
+  QrCodeComp,
 } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -14,7 +15,10 @@ import { showModal } from "../features/modal/modalSlice";
 import { GiBatteries } from "react-icons/gi";
 
 function Batteries() {
-  const { batteriesList } = useSelector((state) => state.batteryReducer);
+  const { batteriesList, selectedBattery } = useSelector(
+    (state) => state.batteryReducer
+  );
+  const { isQrCodeComp } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -40,7 +44,11 @@ function Batteries() {
         <BatteriesTable data={batteriesList} />
 
         <Modal>
-          <NewBatteryForm />
+          {isQrCodeComp ? (
+            <QrCodeComp batteryId={selectedBattery?.$id} />
+          ) : (
+            <NewBatteryForm />
+          )}
         </Modal>
       </div>
     </section>

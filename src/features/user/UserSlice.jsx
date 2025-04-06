@@ -288,6 +288,21 @@ export const getActiveUsers = createAsyncThunk(
   }
 );
 
+// getUserByBatteryId
+// export const getUserByBattery = createAsyncThunk(
+//   "user/getUserByBattery",
+//   async (batteryId, thunkAPI) => {
+//     try {
+//       const resp = await databases.listDocuments(dbId, usersCollId, [
+//         Query.equal("batteryId", batteryId),
+//       ]);
+//       return resp;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(error);
+//     }
+//   }
+// );
+
 // return bike from user
 export const returnBikeFrmUser = createAsyncThunk(
   "user/returnBikeFrmUser",
@@ -568,6 +583,20 @@ const userSlice = createSlice({
         console.log("error in user/toggleUserBlock");
         console.log(payload);
       });
+    // .addCase(getUserByBattery.pending, (state) => {
+    //   state.isUserLoading = true;
+    // })
+    // .addCase(getUserByBattery.fulfilled, (state, { payload }) => {
+    //   state.isUserLoading = false;
+    //   console.log(payload);
+    //   state.selectedUser = payload.documents[0];
+    //   console.log(state.selectedUser);
+    // })
+    // .addCase(getUserByBattery.rejected, (state, { payload }) => {
+    //   state.isUserLoading = false;
+    //   console.log("error in user/getUserByBattery");
+    //   console.log(payload);
+    // });
   },
 });
 

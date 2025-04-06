@@ -14,9 +14,9 @@ const initialState = {
   isLoading: null,
   batteriesList: null,
   availableBatteries: null,
-  batteryById: null,
   swapLoading: false,
   isEditBattery: false,
+  batteryById: null,
   selectedBattery: null,
   todaySwapCount: null,
 };

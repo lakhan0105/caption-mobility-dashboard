@@ -13,6 +13,8 @@ import {
 
 import Select from "react-select";
 import { getActiveUsers } from "../features/user/UserSlice";
+import ScannerComp from "./ScannerComp";
+import toast from "react-hot-toast";
 
 function SwapForm({ userDetails, getUser }) {
   const dispatch = useDispatch();
@@ -22,13 +24,11 @@ function SwapForm({ userDetails, getUser }) {
       dispatch(getActiveUsers());
     }
     dispatch(getAvailableBatteries());
-    console.log(userDetails);
   }, []);
 
   // get the list of available batteries
-  const { availableBatteries, isLoading, swapLoading } = useSelector(
-    (state) => state.batteryReducer
-  );
+  const { availableBatteries, isLoading, swapLoading, batteryById } =
+    useSelector((state) => state.batteryReducer);
 
   // get the list of active users
   const { activeUsers, isUserLoading } = useSelector(
@@ -44,41 +44,41 @@ function SwapForm({ userDetails, getUser }) {
   const [swapCount, setSwapCount] = useState();
 
   // set the options
-  useEffect(() => {
-    // options for active users
-    setOptions(
-      activeUsers?.map((user) => {
-        const {
-          $id,
-          userName,
-          batteryId,
-          totalSwapCount,
-          pendingAmount,
-          isBlocked,
-          userNotes,
-        } = user;
-        return {
-          value: $id,
-          $id,
-          label: userName,
-          batteryId,
-          userName,
-          totalSwapCount,
-          pendingAmount,
-          isBlocked,
-          userNotes,
-        };
-      })
-    );
+  // useEffect(() => {
+  //   // options for active users
+  //   setOptions(
+  //     activeUsers?.map((user) => {
+  //       const {
+  //         $id,
+  //         userName,
+  //         batteryId,
+  //         totalSwapCount,
+  //         pendingAmount,
+  //         isBlocked,
+  //         userNotes,
+  //       } = user;
+  //       return {
+  //         value: $id,
+  //         $id,
+  //         label: userName,
+  //         batteryId,
+  //         userName,
+  //         totalSwapCount,
+  //         pendingAmount,
+  //         isBlocked,
+  //         userNotes,
+  //       };
+  //     })
+  //   );
 
-    // options for available batteries
-    setBatteryOptions(
-      availableBatteries?.map((battery) => {
-        const { $id, batRegNum } = battery;
-        return { value: $id, $id, label: batRegNum, batRegNum };
-      })
-    );
-  }, [activeUsers]);
+  //   // options for available batteries
+  //   setBatteryOptions(
+  //     availableBatteries?.map((battery) => {
+  //       const { $id, batRegNum } = battery;
+  //       return { value: $id, $id, label: batRegNum, batRegNum };
+  //     })
+  //   );
+  // }, [activeUsers]);
 
   // get and set the swap count of the user or the selected user
   useEffect(() => {
@@ -103,6 +103,11 @@ function SwapForm({ userDetails, getUser }) {
     const isBlocked = userDetails?.isBlocked || selectedUser?.isBlocked;
 
     try {
+      if (oldBatteryId === newBatteryId) {
+        toast.error("cannot swap same batteries");
+        return;
+      }
+
       await dispatch(
         swapBattery({
           userId,
@@ -127,7 +132,10 @@ function SwapForm({ userDetails, getUser }) {
     }
   }
 
-  function handleOldBatteryDetails(batteryId) {
+  function handleOldBatteryDetails(batteryId, user) {
+    console.log("inside", batteryId);
+    console.log(user);
+    setSelectedUser(user);
     if (batteryId) {
       dispatch(getBatteryById(batteryId))
         .unwrap()
@@ -140,6 +148,15 @@ function SwapForm({ userDetails, getUser }) {
     } else {
       setOldBatteryDetails(null);
     }
+  }
+
+  // handleScanNewBattery
+  function handleScanNewBattery(newBatteryId) {
+    // if(selectedUser?.$id )
+
+    // run the function to get the battery details by id
+    dispatch(getBatteryById(newBatteryId));
+    setSelectedBattery(batteryById);
   }
 
   useEffect(() => {
@@ -197,30 +214,19 @@ function SwapForm({ userDetails, getUser }) {
             </h4>
           )}
 
-          {/* INPUT TO SELECT THE USER */}
-          <>
-            <label htmlFor="bike">Select user</label>
+          {/* AFTER SCAN, WE NEED 
+          - user details who has that battery(setSelectedUser(userobj))
+          - handleOldBatteryDetails(batteryId)  */}
 
-            <Select
-              options={options}
-              value={options?.find(
-                (option) => option.value === selectedUser?.$id
-              )}
-              onChange={(user) => {
-                // grab the batteryId from the selected input
-                const { batteryId } = user;
-                if (user) {
-                  setSelectedUser(user);
-                  console.log(user);
-                }
-
-                // run the getBatteryById only when the batteryId is present or else the swapForm component re-renders and the selected user also resets
-                if (batteryId) {
-                  handleOldBatteryDetails(batteryId);
-                }
-              }}
+          {/* HTML5 SCANNER COMPONENT (SCAN OLD BATTERY TO GET THE USER)*/}
+          {selectedUser ? (
+            <h2>Selected User : {selectedUser?.userRegisterId}</h2>
+          ) : (
+            <ScannerComp
+              handleOldBatteryDetails={handleOldBatteryDetails}
+              setSelectedUser={setSelectedUser}
             />
-          </>
+          )}
         </div>
       )}
 
@@ -263,13 +269,14 @@ function SwapForm({ userDetails, getUser }) {
         {(userDetails?.isBlocked === false ||
           selectedUser?.isBlocked === false) && (
           <div>
-            <label htmlFor="bike">Select Battery</label>
-            <Select
-              options={batteryOptions}
-              onChange={(battery) => {
-                setSelectedBattery(battery);
-              }}
-            />
+            {selectedBattery ? (
+              <h2>Selected Battery: {selectedBattery?.batRegNum}</h2>
+            ) : (
+              <ScannerComp
+                scanNewBattery={true}
+                handleScanNewBattery={handleScanNewBattery}
+              />
+            )}
           </div>
         )}
       </div>
@@ -277,7 +284,7 @@ function SwapForm({ userDetails, getUser }) {
       <SubmitBtn
         text={"Swap Battery"}
         handleSubmit={handleSwap}
-        disabled={!selectedBattery || !selectedUser || isLoading}
+        disabled={!selectedBattery || isLoading}
       />
     </form>
   );
