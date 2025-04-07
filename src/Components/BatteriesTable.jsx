@@ -44,7 +44,6 @@ function BatteriesTable({ data }) {
       dispatch(setEditBattery(false));
     } else {
       dispatch(showOptionsModal());
-      dispatch(setOptionsModalPosition({ x: e.clientX, y: e.clientY }));
       dispatch(setSelectedBattery(data));
     }
   }
@@ -55,6 +54,7 @@ function BatteriesTable({ data }) {
     e.preventDefault();
     dispatch(setEditBattery(true));
     dispatch(showModal());
+    dispatch(hideOptionsModal());
   }
 
   // handleDeleteBat
@@ -126,18 +126,18 @@ function BatteriesTable({ data }) {
               >
                 <SlOptionsVertical />
               </button>
-
-              {optionsModalState && (
-                <OptionsModal
-                  handleEditBtn={handleEditBat}
-                  handleDeleteBtn={handleDeleteBat}
-                  openQrCodeComp={openQrCodeComp}
-                />
-              )}
             </TableRow>
           );
         })}
       </div>
+
+      {optionsModalState && (
+        <OptionsModal
+          handleEditBtn={handleEditBat}
+          handleDeleteBtn={handleDeleteBat}
+          openQrCodeComp={openQrCodeComp}
+        />
+      )}
     </GenericTable>
   );
 }

@@ -53,6 +53,7 @@ function BikesTable({ data }) {
     e.preventDefault();
     dispatch(setEditBike(true));
     dispatch(showModal());
+    dispatch(hideOptionsModal());
   }
 
   // handle delete btn
@@ -123,17 +124,18 @@ function BikesTable({ data }) {
               >
                 <SlOptionsVertical />
               </button>
-
-              {optionsModalState && (
-                <OptionsModal
-                  handleEditBtn={handleEditBike}
-                  handleDeleteBtn={handleDeleteBike}
-                />
-              )}
             </TableRow>
           );
         })}
       </div>
+
+      {optionsModalState && (
+        <OptionsModal
+          optionsModalState={optionsModalState}
+          handleEditBtn={handleEditBike}
+          handleDeleteBtn={handleDeleteBike}
+        />
+      )}
     </GenericTable>
   );
 }
