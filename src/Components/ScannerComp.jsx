@@ -1,6 +1,6 @@
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeScanner } from "html5-qrcode";
 import React, { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 // import { getUserByBattery } from "../features/user/UserSlice";
 
 import { databases } from "../appwrite";
@@ -13,7 +13,7 @@ function ScannerComp({
   handleScanNewBattery,
   handleOldBatteryDetails,
 }) {
-  const dispatch = useDispatch();
+  const [isScanning, setIsScanning] = useState(false);
 
   // getUserByBatteryId
   const getUserByBatteryId = async (batteryId) => {
@@ -29,6 +29,9 @@ function ScannerComp({
   };
 
   useEffect(() => {
+    let html5QrCode = null;
+    let isMounted = true;
+
     function onScanSuccess(batteryId) {
       // if scanNewBattery === true, then run different code
       if (scanNewBattery) {
@@ -52,19 +55,55 @@ function ScannerComp({
       console.warn(`Code scan error = ${error}`);
     }
 
-    let scanner = new Html5QrcodeScanner(
-      "reader",
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      /* verbose= */ false
-    );
+    const startScanner = async () => {
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (!isMounted) return; // exit this block if isMounted is false
 
-    scanner.render(onScanSuccess, onScanFailure);
+        if (devices && devices.length) {
+          var cameraId = devices[0].id;
+          html5QrCode = new Html5Qrcode("reader");
 
-    // Cleanup
-    return () => {
-      scanner.clear().catch((error) => console.error("Clear error", error));
+          // start the camera
+          html5QrCode.start(
+            cameraId,
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+            },
+            (batteryId) => {
+              onScanSuccess(batteryId);
+            },
+            (errorMessage) => {
+              onScanFailure(errorMessage);
+            }
+          );
+        }
+
+        // set the isScanning state as true
+        if (isMounted) {
+          setIsScanning(true);
+        }
+      } catch (error) {
+        console.log("scanner error", error);
+      }
     };
-  }, []);
+
+    startScanner();
+
+    // cleanup function
+    return () => {
+      isMounted = false;
+      setIsScanning(false);
+
+      if (html5QrCode) {
+        html5QrCode
+          .stop()
+          .then(() => html5QrCode.clear())
+          .catch((err) => console.log("cleanup error", err));
+      }
+    };
+  }, [scanNewBattery]);
 
   return <div id="reader"></div>;
 }
