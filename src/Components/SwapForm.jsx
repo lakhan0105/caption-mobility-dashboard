@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import SubmitBtn from "./Buttons/SubmitBtn";
-import { closeModal } from "../features/modal/modalSlice";
+import { closeModal, hideSwapForm } from "../features/modal/modalSlice";
 import { IoClose } from "react-icons/io5";
 import { RiErrorWarningLine, RiH4 } from "react-icons/ri";
+import { AiOutlineScan } from "react-icons/ai";
+import { IoIosCheckmarkCircleOutline } from "react-icons/io";
 
 import {
   getAvailableBatteries,
@@ -30,18 +32,14 @@ function SwapForm({ userDetails, getUser }) {
     (state) => state.batteryReducer
   );
 
-  // get the list of active users
-  const { activeUsers, isUserLoading } = useSelector(
-    (state) => state.userReducer
-  );
-
   const [selectedBattery, setSelectedBattery] = useState();
   const [selectedUser, setSelectedUser] = useState(userDetails?.$id || null);
   const [oldBatteryDetails, setOldBatteryDetails] = useState();
-
-  const [options, setOptions] = useState([]);
-  const [batteryOptions, setBatteryOptions] = useState();
   const [swapCount, setSwapCount] = useState();
+
+  // states to control the scan buttons in swap form
+  const [showOldBatteryScanner, setShowOldBatteryScanner] = useState(false);
+  const [showNewBatteryScanner, setShowNewBatteryScanner] = useState(false);
 
   // set the options
   // useEffect(() => {
@@ -172,9 +170,9 @@ function SwapForm({ userDetails, getUser }) {
     }
   }, []);
 
-  if (isLoading) {
-    return <h2 className="bg-white rounded p-2 text-sm">Loading...</h2>;
-  }
+  // if (isLoading) {
+  //   return <h2 className="bg-white rounded p-2 text-sm">Loading...</h2>;
+  // }
 
   if (swapLoading) {
     return <h2 className="bg-white rounded p-2 text-sm">Swap in process..</h2>;
@@ -189,12 +187,15 @@ function SwapForm({ userDetails, getUser }) {
           dispatch(closeModal());
           setSelectedBattery(null);
           setSelectedUser(null);
+          setShowOldBatteryScanner(false);
+          setShowNewBatteryScanner(false);
+          dispatch(hideSwapForm());
         }}
       >
         <IoClose />
       </button>
 
-      <h3 className="font-semibold text-xl">SWAP BATTERY</h3>
+      <h3 className="font-medium text-base mb-2">Swap Battery</h3>
 
       {/* SELECT USER */}
       {/* show this only when the userDetails is not passed as props */}
@@ -229,12 +230,34 @@ function SwapForm({ userDetails, getUser }) {
 
           {/* HTML5 SCANNER COMPONENT (SCAN OLD BATTERY TO GET THE USER)*/}
           {selectedUser ? (
-            <h2>Selected User : {selectedUser?.userRegisterId}</h2>
+            <div className="py-0 w-full text-sm flex items-center justify-start gap-1.5">
+              <span className="text-xl">
+                <IoIosCheckmarkCircleOutline />
+              </span>
+              {isLoading ? "loading" : `${selectedUser?.userName}`}
+            </div>
           ) : (
-            <ScannerComp
-              handleOldBatteryDetails={handleOldBatteryDetails}
-              setSelectedUser={setSelectedUser}
-            />
+            <>
+              {!showOldBatteryScanner ? (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowOldBatteryScanner(true);
+                  }}
+                  className="border text-sm p-2 py-2.5 rounded w-full flex items-center justify-center gap-1.5"
+                >
+                  <span className="text-xl">
+                    <AiOutlineScan />
+                  </span>
+                  scan old battery
+                </button>
+              ) : (
+                <ScannerComp
+                  handleOldBatteryDetails={handleOldBatteryDetails}
+                  setSelectedUser={setSelectedUser}
+                />
+              )}
+            </>
           )}
         </div>
       )}
@@ -277,14 +300,33 @@ function SwapForm({ userDetails, getUser }) {
          */}
         {(userDetails?.isBlocked === false ||
           selectedUser?.isBlocked === false) && (
-          <div>
+          <div className="mb-2">
             {selectedBattery ? (
-              <h2>Selected Battery: {selectedBattery?.batRegNum}</h2>
+              <div className="py-0 w-full text-sm flex items-center justify-start gap-1.5">
+                <span className="text-xl">
+                  <IoIosCheckmarkCircleOutline />
+                </span>
+                {isLoading ? "loading" : `${selectedBattery?.batRegNum}`}
+              </div>
             ) : (
-              <ScannerComp
-                scanNewBattery={true}
-                handleScanNewBattery={handleScanNewBattery}
-              />
+              <>
+                {!showNewBatteryScanner ? (
+                  <button
+                    onClick={() => setShowNewBatteryScanner(true)}
+                    className="border text-sm p-2 py-2.5 rounded w-full flex items-center justify-center gap-1.5"
+                  >
+                    <span>
+                      <AiOutlineScan />
+                    </span>
+                    scan new battery
+                  </button>
+                ) : (
+                  <ScannerComp
+                    scanNewBattery={true}
+                    handleScanNewBattery={handleScanNewBattery}
+                  />
+                )}
+              </>
             )}
           </div>
         )}

@@ -39,6 +39,9 @@ const modalSlice = createSlice({
     showSwapForm(state) {
       state.isSwapForm = true;
     },
+    hideSwapForm(state) {
+      state.isSwapForm = false;
+    },
     showLoader(state) {
       state.isLoading = true;
     },
@@ -72,6 +75,7 @@ export const {
   showEditPaymentModal,
   showAssignForm,
   showSwapForm,
+  hideSwapForm,
   showLoader,
   hideLoader,
   showOptionsModal,
