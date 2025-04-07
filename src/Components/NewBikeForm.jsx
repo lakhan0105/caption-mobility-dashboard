@@ -1,9 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { closeModal, hideOptionsModal } from "../features/modal/modalSlice";
+import {
+  closeModal,
+  hideOptionsModal,
+  setOptionsModalPosition,
+} from "../features/modal/modalSlice";
 import InputRow from "./InputRow";
 import SubmitBtn from "./Buttons/SubmitBtn";
-import { addBike, editBikeRegNum, getBikes } from "../features/bike/bikeSlice";
+import {
+  addBike,
+  editBikeRegNum,
+  getBikes,
+  setEditBike,
+} from "../features/bike/bikeSlice";
+import { IoIosClose } from "react-icons/io";
 
 function NewBikeForm() {
   const { isEditBike, selectedBike } = useSelector(
@@ -69,12 +79,17 @@ function NewBikeForm() {
       onSubmit={!isEditBike ? handleAddNewBike : handleEditBike}
     >
       <button
-        className="absolute right-4 top-4 cursor-pointer"
+        className="absolute right-4 top-3.5 cursor-pointer"
         onClick={() => {
           dispatch(closeModal());
+          dispatch(setEditBike(false));
+          dispatch(hideOptionsModal());
+          dispatch(setOptionsModalPosition({ x: 0, y: 0 }));
         }}
       >
-        close
+        <span className="text-4xl">
+          <IoIosClose />
+        </span>
       </button>
 
       {/* BIKE REG NUMBER */}

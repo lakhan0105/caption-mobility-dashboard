@@ -8,6 +8,7 @@ import {
   editBatRegNum,
   getBatteriesList,
 } from "../features/battery/batterySlice";
+import { IoIosClose } from "react-icons/io";
 
 function NewBatteryForm() {
   const dispatch = useDispatch();
@@ -78,12 +79,14 @@ function NewBatteryForm() {
       onSubmit={isEditBattery ? handleEditBattery : handleAddNewBattery}
     >
       <button
-        className="absolute right-4 top-4 cursor-pointer"
+        className="absolute right-4 top-3.5 cursor-pointer"
         onClick={() => {
           dispatch(closeModal());
         }}
       >
-        close
+        <span className="text-4xl">
+          <IoIosClose />
+        </span>
       </button>
 
       {/* BATTERY REG NUMBER */}
