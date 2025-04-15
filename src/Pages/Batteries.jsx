@@ -22,11 +22,16 @@ function Batteries() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    dispatch(getBatteriesList());
+    dispatch(getBatteriesList(0));
   }, []);
 
+  // handleLoadMore
+  function handleLoadMore() {
+    dispatch(getBatteriesList(batteriesList.length));
+  }
+
   return (
-    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-0 pt-0">
+    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] pb-28">
       <div className="max-w-[900px]">
         {/* PAGE HEADER */}
         <PageHeader
@@ -44,6 +49,18 @@ function Batteries() {
         {/* batteries table */}
         {/* {usersList && <UsersTable data={usersList} />} */}
         <BatteriesTable data={batteriesList} />
+
+        {/* load more button */}
+        <div className="text-center">
+          {batteriesList?.length !== batteriesListCount && (
+            <button
+              onClick={handleLoadMore}
+              className="mb-28 border px-5 rounded py-1 bg-white text-sm"
+            >
+              load more
+            </button>
+          )}
+        </div>
 
         <Modal>
           {isQrCodeComp ? (

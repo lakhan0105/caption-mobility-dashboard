@@ -13,8 +13,8 @@ const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 const initialState = {
   isUserLoading: false,
   userProfile: null,
-  usersList: null,
-  usersListCount: null,
+  usersList: [],
+  usersListCount: 0,
   errMsg: null,
   activeUsers: null,
   isEditUser: false,
@@ -131,13 +131,16 @@ export const getUserProfile = createAsyncThunk(
 // get users list
 export const getUsersList = createAsyncThunk(
   "user/getUsersList",
-  async (_, thunkAPI) => {
+  async (offset, thunkAPI) => {
+    const limit = 20;
     try {
-      const response = await databases.listDocuments(dbId, usersCollId);
-      console.log(response);
+      const response = await databases.listDocuments(dbId, usersCollId, [
+        Query.limit(limit),
+        Query.offset(offset),
+      ]);
       return response;
     } catch (error) {
-      return thunkAPI.rejectWithValue("error in user/getUsersList", error);
+      return thunkAPI.rejectWithValue(error);
     }
   }
 );
@@ -420,7 +423,15 @@ const userSlice = createSlice({
         state.isUserLoading = false;
         console.log(action.payload);
         const { total, documents } = action.payload;
-        state.usersList = documents;
+
+        console.log(documents);
+
+        if (action.meta.arg === 0) {
+          state.usersList = documents;
+        } else {
+          state.usersList = [...state.usersList, ...documents];
+        }
+
         state.usersListCount = total;
       })
       .addCase(getUsersList.rejected, (state, { payload }) => {

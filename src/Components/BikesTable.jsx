@@ -21,7 +21,9 @@ import toast from "react-hot-toast";
 
 function BikesTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
-  const { selectedBike, isLoading } = useSelector((state) => state.bikeReducer);
+  const { selectedBike, bikesList, isLoading } = useSelector(
+    (state) => state.bikeReducer
+  );
   const { optionsModalState } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
 
@@ -71,7 +73,7 @@ function BikesTable({ data }) {
       .unwrap()
       .then(() => {
         dispatch(hideOptionsModal());
-        dispatch(getBikes());
+        dispatch(getBikes(bikesList?.length));
       });
   }
 
@@ -95,13 +97,13 @@ function BikesTable({ data }) {
           } = item;
 
           return (
-            <TableRow cols={bikesTableCols} key={item.$id}>
+            <TableRow cols={bikesTableCols} key={item?.$id}>
               {/* SL NUMBER */}
               <p className="text-[0.7rem] w-[20px] h-[20px] font-medium border bg-indigo-950 text-white flex items-center justify-center rounded-2xl mt-0.5">
                 {index + 1}
               </p>
 
-              <p>{bikeRegNum.toUpperCase()}</p>
+              <p>{item?.bikeRegNum?.toUpperCase()}</p>
 
               <div className="flex gap-4 justify-center text-xs">
                 {bikeStatus ? (

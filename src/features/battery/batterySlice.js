@@ -12,8 +12,8 @@ const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 
 const initialState = {
   isLoading: null,
-  batteriesList: null,
-  batteriesListCount: null,
+  batteriesList: [],
+  batteriesListCount: 0,
   availableBatteries: null,
   swapLoading: false,
   isEditBattery: false,
@@ -25,9 +25,13 @@ const initialState = {
 // get all batteries list
 export const getBatteriesList = createAsyncThunk(
   "battery/getBatteriesList",
-  async (_, thunkAPI) => {
+  async (offset, thunkAPI) => {
+    const limit = 20;
     try {
-      const response = await databases.listDocuments(dbId, batteriesCollId);
+      const response = await databases.listDocuments(dbId, batteriesCollId, [
+        Query.limit(limit),
+        Query.offset(offset),
+      ]);
       console.log(response);
       return response;
     } catch (error) {
@@ -316,10 +320,17 @@ const batterySlice = createSlice({
       .addCase(getBatteriesList.pending, (state, action) => {
         state.isLoading = true;
       })
-      .addCase(getBatteriesList.fulfilled, (state, { payload }) => {
+      .addCase(getBatteriesList.fulfilled, (state, { payload, meta }) => {
         state.isLoading = false;
-        state.batteriesList = payload.documents;
-        state.batteriesListCount = payload.total;
+        const { documents, total } = payload;
+
+        if (meta.arg === 0) {
+          state.batteriesList = documents;
+        } else {
+          state.batteriesList = [...state.batteriesList, ...documents];
+        }
+
+        state.batteriesListCount = total;
       })
       .addCase(getBatteriesList.rejected, (state, { payload }) => {
         state.isLoading = false;
