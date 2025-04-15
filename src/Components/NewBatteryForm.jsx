@@ -9,14 +9,12 @@ import {
   getBatteriesList,
 } from "../features/battery/batterySlice";
 import { IoIosClose } from "react-icons/io";
-import { updateTotalCounts } from "../features/count/countSlice";
 
 function NewBatteryForm() {
   const dispatch = useDispatch();
   const { selectedBattery, isEditBattery } = useSelector(
     (state) => state.batteryReducer
   );
-  const { totalBatteries } = useSelector((state) => state.countReducer);
 
   const [userInputState, setUserInputState] = useState({ batRegNum: "" });
 
@@ -47,7 +45,6 @@ function NewBatteryForm() {
       .unwrap()
       .then((resp) => {
         if (resp) {
-          dispatch(updateTotalCounts({ totalBatteries: totalBatteries + 1 }));
           setUserInputState({});
           dispatch(closeModal());
           dispatch(getBatteriesList());

@@ -8,13 +8,12 @@ import { ID } from "appwrite";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import toast from "react-hot-toast";
 import { addCompanyIfNew } from "../features/company/companySlice";
-import { updateTotalCounts } from "../features/count/countSlice";
 
 function UserForm() {
   const { isEditUser, selectedUser } = useSelector(
     (state) => state.userReducer
   );
-  const { totalUsers } = useSelector((state) => state.countReducer);
+
   const dispatch = useDispatch();
 
   const [userInputState, setUserInputState] = useState({
@@ -85,9 +84,6 @@ function UserForm() {
     dispatch(createUser(userData))
       .then((resp) => {
         if (createUser.fulfilled.match(resp)) {
-          // update the total count of the user
-          dispatch(updateTotalCounts({ totalUsers: totalUsers + 1 }));
-
           // if the user has been created successfully then add a company name (if new)
           postUserSuccess(
             "user created successfully!",

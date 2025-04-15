@@ -9,6 +9,7 @@ const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
 const initialState = {
   isLoading: null,
   bikesList: null,
+  bikesListCount: null,
   availableBikes: null,
   bikeById: null,
   isEditBike: false,
@@ -21,7 +22,7 @@ export const getBikes = createAsyncThunk(
     try {
       const response = await databases.listDocuments(dbId, bikesCollId);
       console.log(response);
-      return response.documents;
+      return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
@@ -162,7 +163,8 @@ const bikeSlice = createSlice({
       .addCase(getBikes.fulfilled, (state, { payload }) => {
         state.isLoading = false;
         console.log("we found the bikes data");
-        state.bikesList = payload;
+        state.bikesList = payload.documents;
+        state.bikesListCount = payload.total;
       })
       .addCase(getBikes.rejected, (state, { payload }) => {
         state.isLoading = false;
