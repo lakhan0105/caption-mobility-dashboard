@@ -15,6 +15,7 @@ import {
   getUsersList,
   setEditUser,
 } from "../features/user/UserSlice";
+
 import {
   hideOptionsModal,
   setIsBlockFrom,
@@ -30,7 +31,7 @@ function Users() {
 
   useEffect(() => {
     if (!usersList || !usersList?.length) {
-      dispatch(getUsersList());
+      dispatch(getUsersList(0));
     }
     dispatch(hideOptionsModal());
   }, []);
@@ -52,14 +53,17 @@ function Users() {
     dispatch(getUserBySearch(inputText));
   }
 
+  // handleLoadMore
+  function handleLoadMore() {
+    dispatch(getUsersList(usersList?.length));
+  }
+
   return (
     <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
       <div className="max-w-[900px] overflow-hidden">
         {/* PAGE TOP SECTION*/}
         <PageHeader
-          heading={`users list - ${
-            usersListCount ? usersListCount : "loading..."
-          }`}
+          heading={`users list - ${usersListCount}`}
           handleFunction={handleNewUser}
         >
           <SearchBar
@@ -77,6 +81,18 @@ function Users() {
         ) : (
           <UsersTable data={usersList} />
         )}
+
+        {/* load more button */}
+        <div className="text-center">
+          {usersList?.length !== usersListCount && !isUserLoading && (
+            <button
+              onClick={handleLoadMore}
+              className="mb-28 border px-5 rounded py-1 bg-white text-sm"
+            >
+              load more
+            </button>
+          )}
+        </div>
 
         <Modal>{isBlockForm ? <BlockForm /> : <UserForm />}</Modal>
       </div>

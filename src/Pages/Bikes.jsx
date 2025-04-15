@@ -21,11 +21,17 @@ function Bikes() {
   );
 
   useEffect(() => {
-    dispatch(getBikes());
+    dispatch(getBikes(0));
   }, []);
 
+  // handleLoadMore
+  // - loads more bikes list
+  function handleLoadMore() {
+    dispatch(getBikes(bikesList?.length));
+  }
+
   return (
-    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] px-0 pt-0">
+    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] pb-28">
       <div className="max-w-[900px]">
         <PageHeader
           heading={`bikes - ${bikesListCount ? bikesListCount : "loading..."}`}
@@ -38,6 +44,18 @@ function Bikes() {
 
         {/* bikes table */}
         {bikesList && <BikesTable data={bikesList} />}
+
+        {/* load more button */}
+        <div className="text-center">
+          {bikesList?.length !== bikesListCount && !isLoading && (
+            <button
+              onClick={handleLoadMore}
+              className="mb-28 border px-5 rounded py-1 bg-white text-sm"
+            >
+              load more
+            </button>
+          )}
+        </div>
 
         <Modal>
           <NewBikeForm />

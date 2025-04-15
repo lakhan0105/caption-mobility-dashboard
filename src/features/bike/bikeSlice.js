@@ -8,8 +8,8 @@ const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
 
 const initialState = {
   isLoading: null,
-  bikesList: null,
-  bikesListCount: null,
+  bikesList: [],
+  bikesListCount: 0,
   availableBikes: null,
   bikeById: null,
   isEditBike: false,
@@ -18,9 +18,14 @@ const initialState = {
 
 export const getBikes = createAsyncThunk(
   "bike/getBikes",
-  async (__, thunkAPI) => {
+  async (offset, thunkAPI) => {
+    const limit = 20;
     try {
-      const response = await databases.listDocuments(dbId, bikesCollId);
+      const response = await databases.listDocuments(dbId, bikesCollId, [
+        Query.limit(limit),
+        Query.offset(offset),
+      ]);
+      console.log("fetching bikes list...");
       console.log(response);
       return response;
     } catch (error) {
@@ -160,10 +165,16 @@ const bikeSlice = createSlice({
       .addCase(getBikes.pending, (state, action) => {
         state.isLoading = true;
       })
-      .addCase(getBikes.fulfilled, (state, { payload }) => {
+      .addCase(getBikes.fulfilled, (state, { payload, meta }) => {
         state.isLoading = false;
         console.log("we found the bikes data");
-        state.bikesList = payload.documents;
+
+        if (meta.arg === 0) {
+          state.bikesList = payload.documents;
+        } else {
+          state.bikesList = [...state.bikesList, ...payload.documents];
+        }
+
         state.bikesListCount = payload.total;
       })
       .addCase(getBikes.rejected, (state, { payload }) => {
@@ -236,8 +247,13 @@ const bikeSlice = createSlice({
       .addCase(deleteBike.pending, (state, action) => {
         state.isLoading = true;
       })
-      .addCase(deleteBike.fulfilled, (state, { payload }) => {
+      .addCase(deleteBike.fulfilled, (state, { meta }) => {
         state.isLoading = false;
+
+        // update the bikesList and bikesListCount after deleteBike
+        const bikeId = meta.arg; // bikeId passed to deleteBike
+        state.bikesList = state.bikesList.filter((bike) => bike.$id !== bikeId);
+        state.bikesListCount -= 1;
         toast.success("deleted the bike successfully!");
       })
       .addCase(deleteBike.rejected, (state, { payload }) => {
