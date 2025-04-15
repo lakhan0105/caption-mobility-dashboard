@@ -19,6 +19,7 @@ function Batteries() {
     (state) => state.batteryReducer
   );
   const { isQrCodeComp } = useSelector((state) => state.modalReducer);
+  const { totalBatteries } = useSelector((state) => state.countReducer);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -30,7 +31,7 @@ function Batteries() {
       <div className="max-w-[900px]">
         {/* PAGE HEADER */}
         <PageHeader
-          heading={"Batteries"}
+          heading={`Batteries - ${totalBatteries}`}
           btnName={"+ add new battery"}
           handleFunction={() => {
             dispatch(setEditBattery(false));

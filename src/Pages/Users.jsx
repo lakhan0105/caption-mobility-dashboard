@@ -20,6 +20,7 @@ import {
   setIsBlockFrom,
   showModal,
 } from "../features/modal/modalSlice";
+import { getTotalCounts } from "../features/count/countSlice";
 
 function Users() {
   const { usersList, isUserLoading } = useSelector(
@@ -27,12 +28,14 @@ function Users() {
   );
 
   const { isBlockForm } = useSelector((state) => state.modalReducer);
+  const { totalUsers } = useSelector((state) => state.countReducer);
 
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (!usersList || !usersList?.length) {
       dispatch(getUsersList());
+      dispatch(getTotalCounts());
     }
 
     dispatch(hideOptionsModal());
@@ -61,7 +64,10 @@ function Users() {
     <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
       <div className="max-w-[900px] overflow-hidden">
         {/* PAGE TOP SECTION*/}
-        <PageHeader heading={"users list"} handleFunction={handleNewUser}>
+        <PageHeader
+          heading={`users list - ${totalUsers}`}
+          handleFunction={handleNewUser}
+        >
           <SearchBar
             handleSearch={handleUsersSearch}
             placeHolder={"find users"}
@@ -78,13 +84,7 @@ function Users() {
           <UsersTable data={usersList} />
         )}
 
-        <Modal>
-          {/* <UserForm />
-
-          <BlockForm /> */}
-
-          {isBlockForm ? <BlockForm /> : <UserForm />}
-        </Modal>
+        <Modal>{isBlockForm ? <BlockForm /> : <UserForm />}</Modal>
       </div>
     </section>
   );
