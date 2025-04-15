@@ -14,11 +14,13 @@ import {
   setEditBike,
 } from "../features/bike/bikeSlice";
 import { IoIosClose } from "react-icons/io";
+import { updateTotalCounts } from "../features/count/countSlice";
 
 function NewBikeForm() {
   const { isEditBike, selectedBike } = useSelector(
     (state) => state.bikeReducer
   );
+  const { totalBikes } = useSelector((state) => state.countReducer);
 
   const dispatch = useDispatch();
   const [userInputState, setUserInputState] = useState({ bikeRegNum: "" });
@@ -45,6 +47,7 @@ function NewBikeForm() {
       .unwrap()
       .then((resp) => {
         if (resp) {
+          dispatch(updateTotalCounts({ totalBikes: totalBikes + 1 }));
           setUserInputState({});
           dispatch(closeModal());
           dispatch(getBikes());

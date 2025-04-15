@@ -19,11 +19,13 @@ import {
   setEditBattery,
   setSelectedBattery,
 } from "../features/battery/batterySlice";
+import { updateTotalCounts } from "../features/count/countSlice";
 
 function BatteriesTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
   const { optionsModalState } = useSelector((state) => state.modalReducer);
   const { selectedBattery } = useSelector((state) => state.batteryReducer);
+  const { totalBatteries } = useSelector((state) => state.countReducer);
 
   const dispatch = useDispatch();
 
@@ -64,6 +66,7 @@ function BatteriesTable({ data }) {
     dispatch(deleteBattery(selectedBattery?.$id))
       .unwrap()
       .then(() => {
+        dispatch(updateTotalCounts({ totalBatteries: totalBatteries - 1 }));
         dispatch(hideOptionsModal());
         dispatch(getBatteriesList());
       });
@@ -105,7 +108,9 @@ function BatteriesTable({ data }) {
                 {index + 1}
               </p>
 
-              <h2 className="font-medium text-md capitalize">{batRegNum}</h2>
+              <h2 className="font-medium text-md capitalize">
+                {batRegNum.toUpperCase()}
+              </h2>
 
               {/* BATTERY STATUS */}
               <div className="flex gap-4 justify-center text-xs">

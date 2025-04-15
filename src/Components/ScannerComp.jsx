@@ -32,6 +32,7 @@ function ScannerComp({
     let html5QrCode = null;
     let isMounted = true;
 
+    // success
     function onScanSuccess(batteryId) {
       // if scanNewBattery === true, then run different code
       if (scanNewBattery) {
@@ -49,6 +50,7 @@ function ScannerComp({
       })();
     }
 
+    // failure
     function onScanFailure(error) {
       // handle scan failure, usually better to ignore and keep scanning.
       // for example:
@@ -66,7 +68,7 @@ function ScannerComp({
 
           // start the camera
           html5QrCode.start(
-            cameraId,
+            { facingMode: "environment" },
             {
               fps: 10,
               qrbox: { width: 250, height: 250 },
