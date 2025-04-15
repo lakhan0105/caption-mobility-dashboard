@@ -7,7 +7,6 @@ import bikeReducer from "./features/bike/bikeSlice";
 import batteryReducer from "./features/battery/batterySlice";
 import recordReducer from "./features/record/recordSlice";
 import companyReducer from "./features/company/companySlice";
-import countReducer from "./features/count/countSlice";
 
 const store = configureStore({
   reducer: {
@@ -19,7 +18,6 @@ const store = configureStore({
     batteryReducer,
     recordReducer,
     companyReducer,
-    countReducer,
   },
 });
 

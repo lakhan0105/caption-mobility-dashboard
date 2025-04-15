@@ -13,6 +13,7 @@ const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 const initialState = {
   isLoading: null,
   batteriesList: null,
+  batteriesListCount: null,
   availableBatteries: null,
   swapLoading: false,
   isEditBattery: false,
@@ -318,6 +319,7 @@ const batterySlice = createSlice({
       .addCase(getBatteriesList.fulfilled, (state, { payload }) => {
         state.isLoading = false;
         state.batteriesList = payload.documents;
+        state.batteriesListCount = payload.total;
       })
       .addCase(getBatteriesList.rejected, (state, { payload }) => {
         state.isLoading = false;

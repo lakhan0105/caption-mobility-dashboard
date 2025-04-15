@@ -20,27 +20,19 @@ import {
   setIsBlockFrom,
   showModal,
 } from "../features/modal/modalSlice";
-import { getTotalCounts } from "../features/count/countSlice";
 
 function Users() {
-  const { usersList, isUserLoading } = useSelector(
+  const { usersList, usersListCount, isUserLoading } = useSelector(
     (state) => state.userReducer
   );
-
   const { isBlockForm } = useSelector((state) => state.modalReducer);
-  const { totalUsers } = useSelector((state) => state.countReducer);
-
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (!usersList || !usersList?.length) {
       dispatch(getUsersList());
-      dispatch(getTotalCounts());
     }
-
     dispatch(hideOptionsModal());
-
-    console.log(isBlockForm);
   }, []);
 
   // open the modal when clicked on add new user
@@ -65,7 +57,9 @@ function Users() {
       <div className="max-w-[900px] overflow-hidden">
         {/* PAGE TOP SECTION*/}
         <PageHeader
-          heading={`users list - ${totalUsers}`}
+          heading={`users list - ${
+            usersListCount ? usersListCount : "loading..."
+          }`}
           handleFunction={handleNewUser}
         >
           <SearchBar

@@ -15,11 +15,10 @@ import { showModal } from "../features/modal/modalSlice";
 import { GiBatteries } from "react-icons/gi";
 
 function Batteries() {
-  const { batteriesList, selectedBattery } = useSelector(
+  const { batteriesList, batteriesListCount, selectedBattery } = useSelector(
     (state) => state.batteryReducer
   );
   const { isQrCodeComp } = useSelector((state) => state.modalReducer);
-  const { totalBatteries } = useSelector((state) => state.countReducer);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -31,7 +30,9 @@ function Batteries() {
       <div className="max-w-[900px]">
         {/* PAGE HEADER */}
         <PageHeader
-          heading={`Batteries - ${totalBatteries}`}
+          heading={`Batteries - ${
+            batteriesListCount ? batteriesListCount : "loading"
+          }`}
           btnName={"+ add new battery"}
           handleFunction={() => {
             dispatch(setEditBattery(false));

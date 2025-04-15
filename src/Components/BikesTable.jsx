@@ -18,13 +18,11 @@ import {
 } from "../features/modal/modalSlice";
 import OptionsModal from "./OptionsModal";
 import toast from "react-hot-toast";
-import { updateTotalCounts } from "../features/count/countSlice";
 
 function BikesTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
   const { selectedBike, isLoading } = useSelector((state) => state.bikeReducer);
   const { optionsModalState } = useSelector((state) => state.modalReducer);
-  const { totalBikes } = useSelector((state) => state.countReducer);
   const dispatch = useDispatch();
 
   // data to pass in tableHeader and body
@@ -72,7 +70,6 @@ function BikesTable({ data }) {
     dispatch(deleteBike(selectedBike?.$id))
       .unwrap()
       .then(() => {
-        dispatch(updateTotalCounts({ totalBikes: totalBikes - 1 }));
         dispatch(hideOptionsModal());
         dispatch(getBikes());
       });

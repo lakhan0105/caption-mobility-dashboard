@@ -23,7 +23,6 @@ import {
   deleteUser,
   getUsersList,
 } from "../features/user/UserSlice";
-import { updateTotalCounts } from "../features/count/countSlice";
 
 // This component will accept the user data, we need pass the headings and cols for mobile and large screens
 // we pass everything as a children to the genricTable component
@@ -32,7 +31,6 @@ function UsersTable({ data }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
   const { selectedUser } = useSelector((state) => state.userReducer);
   const { optionsModalState } = useSelector((state) => state.modalReducer);
-  const { totalUsers } = useSelector((state) => state.countReducer);
   const dispatch = useDispatch();
 
   const userTableHeadings = isMobile
@@ -74,8 +72,6 @@ function UsersTable({ data }) {
     dispatch(deleteUser(selectedUser?.$id))
       .unwrap()
       .then(() => {
-        // decrease the totalUsers count (after the user has been deleted)
-        dispatch(updateTotalCounts({ totalUsers: totalUsers - 1 }));
         dispatch(getUsersList());
         dispatch(hideOptionsModal());
       });

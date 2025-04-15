@@ -14,6 +14,7 @@ const initialState = {
   isUserLoading: false,
   userProfile: null,
   usersList: null,
+  usersListCount: null,
   errMsg: null,
   activeUsers: null,
   isEditUser: false,
@@ -420,6 +421,7 @@ const userSlice = createSlice({
         console.log(action.payload);
         const { total, documents } = action.payload;
         state.usersList = documents;
+        state.usersListCount = total;
       })
       .addCase(getUsersList.rejected, (state, { payload }) => {
         state.isUserLoading = false;
