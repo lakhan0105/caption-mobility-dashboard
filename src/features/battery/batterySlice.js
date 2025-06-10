@@ -82,12 +82,23 @@ export const getAvailableBatteries = createAsyncThunk(
   "feat/getAvailableBatteries",
   async (_, thunkAPI) => {
     try {
-      const resp = await databases.listDocuments(dbId, batteriesCollId, [
-        Query.equal("batStatus", [false]),
-      ]);
-      console.log("available batteries ...");
+      const limit = 100; // Maximum limit allowed by Appwrite
+      let offset = 0; // Start from the first battery
+      let allBatteries = []; // Store all batteries here
+      let total = 0; // Total number of available batteries
 
-      return resp;
+      do {
+        const resp = await databases.listDocuments(dbId, batteriesCollId, [
+          Query.equal("batStatus", [false]), // Get available batteries
+          Query.limit(limit), // Get 100 batteries per request
+          Query.offset(offset), // Skip batteries already fetched
+        ]);
+        allBatteries = allBatteries.concat(resp.documents); // Add new batteries to the list
+        total = resp.total; // Total available batteries
+        offset += limit; // Move to the next batch
+      } while (offset < total); // Continue until all batteries are fetched
+
+      return allBatteries; // Return the complete list
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
@@ -371,7 +382,7 @@ const batterySlice = createSlice({
       })
       .addCase(getAvailableBatteries.fulfilled, (state, { payload }) => {
         state.isLoading = false;
-        state.availableBatteries = payload.documents;
+        state.availableBatteries = payload;
       })
       .addCase(getAvailableBatteries.rejected, (state, { payload }) => {
         state.isLoading = false;

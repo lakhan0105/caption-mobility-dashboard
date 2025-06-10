@@ -15,6 +15,8 @@ function Tabs({ userDetails, handleReturnBike }) {
     chargerStatus,
   } = userDetails;
 
+  console.log("userDetails", userDetails);
+
   // tab Headings Data
   const tabHeadingsData = [
     { id: 1, name: "user-rental", label: "rental" },
