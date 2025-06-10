@@ -2,8 +2,6 @@ import React from "react";
 import InfoCardOne from "../InfoCardOne";
 
 import { MdOutlinePayment } from "react-icons/md";
-import SimpleBtn from "../Buttons/SimpleBtn";
-import InfoCardRowTwo from "../InfoCardRowTwo";
 import { FaRegEdit } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
 

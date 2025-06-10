@@ -58,11 +58,23 @@ export const getAvailableBikes = createAsyncThunk(
   "bike/getAvailableBikes",
   async (_, thunkAPI) => {
     try {
-      const response = await databases.listDocuments(dbId, bikesCollId, [
-        Query.equal("bikeStatus", [false]),
-      ]);
-      console.log(response);
-      return response.documents;
+      const limit = 100; // Maximum limit allowed by Appwrite
+      let offset = 0;
+      let allBikes = [];
+      let total = 0;
+
+      do {
+        const response = await databases.listDocuments(dbId, bikesCollId, [
+          Query.equal("bikeStatus", [false]),
+          Query.limit(limit),
+          Query.offset(offset),
+        ]);
+        allBikes = allBikes.concat(response.documents);
+        total = response.total; // Total number of available bikes
+        offset += limit; // Move to the next batch
+      } while (offset < total);
+
+      return allBikes;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }

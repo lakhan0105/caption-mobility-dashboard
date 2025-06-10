@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { closeModal } from "../features/modal/modalSlice";
 import { getAvailableBikes } from "../features/bike/bikeSlice";
 import SubmitBtn from "./Buttons/SubmitBtn";
-import { useParams } from "react-router";
+import { useFetcher, useParams } from "react-router";
 import { assignBikeToUser } from "../features/user/UserSlice";
 import { getAvailableBatteries } from "../features/battery/batterySlice";
 import InputRow from "./InputRow";
@@ -78,7 +78,7 @@ function AssignForm({ getUser, oldPendingAmount }) {
   }
 
   // display this when the bikes data is loading
-  if (isBikeLoading) {
+  if (isBikeLoading || isBatteryLoading) {
     return <h2>Loading...</h2>;
   }
 
