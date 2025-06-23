@@ -7,7 +7,7 @@ import { databases } from "../appwrite";
 import SimpleBtn from "../Components/Buttons/SimpleBtn";
 import { AssignForm, EditPaymentForm, Modal, SwapForm } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
-import { returnBikeFrmUser } from "../features/user/UserSlice";
+import { returnBikeFromUser } from "../features/user/UserSlice";
 import Tabs from "../Components/Tabs/Tabs";
 import { Avatar } from "@mui/material";
 import { deepPurple } from "@mui/material/colors";

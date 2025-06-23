@@ -9,7 +9,6 @@ const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 
-// Intitial State
 const initialState = {
   isUserLoading: false,
   userProfile: null,
@@ -19,13 +18,12 @@ const initialState = {
   activeUsers: null,
   isEditUser: false,
   selectedUser: null,
+  activeFilter: null,
 };
 
-// createUser
 export const createUser = createAsyncThunk(
   "user/createUser",
   async (data, thunkAPI) => {
-    console.log(data);
     const {
       docID,
       userName,
@@ -34,40 +32,26 @@ export const createUser = createAsyncThunk(
       userCompany,
       userLocation,
     } = data;
-
-    // create a permission so that only the admin can createUser
     const permissions = [
       Permission.read(Role.team(adminTeamId)),
       Permission.update(Role.team(adminTeamId)),
       Permission.delete(Role.team(adminTeamId)),
     ];
-
     try {
       const resp = await databases.createDocument(
         dbId,
         usersCollId,
         docID,
-        {
-          userName,
-          userRegisterId,
-          userPhone,
-          userCompany,
-          userLocation,
-        },
+        { userName, userRegisterId, userPhone, userCompany, userLocation },
         permissions
       );
-
-      console.log(resp);
-
       return resp;
     } catch (error) {
-      console.log(error.response.data);
       return thunkAPI.rejectWithValue(error);
     }
   }
 );
 
-// editUser
 export const editUser = createAsyncThunk(
   "user/editUser",
   async (data, thunkAPI) => {
@@ -79,7 +63,6 @@ export const editUser = createAsyncThunk(
       userCompany,
       userLocation,
     } = data;
-
     try {
       const resp = await databases.updateDocument(dbId, usersCollId, userId, {
         userName,
@@ -95,10 +78,6 @@ export const editUser = createAsyncThunk(
   }
 );
 
-// toggleUserBlock
-// - accepts a userId, isBlocked and userNotes(if he is going to get blocked)
-// - if isBlocked === true -> unblock the user
-// - if isBlocked === false -> block the user
 export const toggleUserBlock = createAsyncThunk(
   "toggleUserBlock",
   async ({ userId, isBlocked, userNotes }, thunkAPI) => {
@@ -107,7 +86,6 @@ export const toggleUserBlock = createAsyncThunk(
         isBlocked,
         userNotes: isBlocked ? userNotes : null,
       });
-
       return resp;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -115,7 +93,6 @@ export const toggleUserBlock = createAsyncThunk(
   }
 );
 
-// getUserProfile
 export const getUserProfile = createAsyncThunk(
   "user/getUserProfile",
   async (id, thunkAPI) => {
@@ -128,7 +105,6 @@ export const getUserProfile = createAsyncThunk(
   }
 );
 
-// get users list
 export const getUsersList = createAsyncThunk(
   "user/getUsersList",
   async (offset, thunkAPI) => {
@@ -145,15 +121,16 @@ export const getUsersList = createAsyncThunk(
   }
 );
 
-// get getUserBySearch
 export const getUserBySearch = createAsyncThunk(
   "user/getUserBySearch",
-  async (inputText, thunkAPI) => {
+  async ({ inputText, offset = 0 }, thunkAPI) => {
+    const limit = 20;
     try {
       const resp = await databases.listDocuments(dbId, usersCollId, [
         Query.contains("userName", inputText),
+        Query.limit(limit),
+        Query.offset(offset),
       ]);
-      console.log(resp);
       return resp;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -161,21 +138,30 @@ export const getUserBySearch = createAsyncThunk(
   }
 );
 
-// get user by filter (rusn when the filter btns are clicked)
 export const getUserByFilter = createAsyncThunk(
   "user/getUserByFilter",
-  async ({ attributeName, attributeValue }, thunkAPI) => {
-    console.log(attributeName, attributeValue);
-
+  async ({ attributeName, attributeValue, offset = 0 }, thunkAPI) => {
+    const limit = 20;
     let query;
     if (attributeName === "userStatus") {
-      query = [Query.equal(`${attributeName}`, true)];
+      query = [
+        Query.equal("userStatus", true),
+        Query.limit(limit),
+        Query.offset(offset),
+      ];
     } else if (attributeName === "pendingAmount") {
-      query = [Query.greaterThan("pendingAmount", 0)];
+      query = [
+        Query.greaterThan("pendingAmount", 0),
+        Query.limit(limit),
+        Query.offset(offset),
+      ];
     } else if (attributeName === "userCompany") {
-      query = [Query.contains("userCompany", attributeValue)];
+      query = [
+        Query.startsWith("userCompany", attributeValue),
+        Query.limit(limit),
+        Query.offset(offset),
+      ];
     }
-
     try {
       const resp = await databases.listDocuments(dbId, usersCollId, query);
       console.log(resp);
@@ -186,7 +172,6 @@ export const getUserByFilter = createAsyncThunk(
   }
 );
 
-// assign bike to user (accepts id, userStatus and bikeId)
 export const assignBikeToUser = createAsyncThunk(
   "user/assignBikeToUser",
   async (
@@ -202,7 +187,6 @@ export const assignBikeToUser = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      // update the user details
       const response = await databases.updateDocument(
         dbId,
         usersCollId,
@@ -218,34 +202,21 @@ export const assignBikeToUser = createAsyncThunk(
           chargerStatus,
         }
       );
-
-      // update the bike status and details after assigning it to the user
       if (response) {
-        // update the bike details
         await thunkAPI
           .dispatch(
-            updateBike({
-              bikeId: selectedBikeId,
-              userId: userId,
-              bikeStatus: true,
-            })
+            updateBike({ bikeId: selectedBikeId, userId, bikeStatus: true })
           )
-          .unwrap()
-          .then(async () => {
-            await thunkAPI.dispatch(
-              updateBattery({
-                batteryId: selectedBatteryId,
-                userId,
-                batStatus: true,
-                assignedAt: new Date(),
-              })
-            );
-          });
-
-        // get the updated usersList, (only after updateBike)
-        thunkAPI.dispatch(getUsersList());
+          .unwrap();
+        await thunkAPI.dispatch(
+          updateBattery({
+            batteryId: selectedBatteryId,
+            userId,
+            batStatus: true,
+            assignedAt: new Date(),
+          })
+        );
       }
-
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -253,31 +224,23 @@ export const assignBikeToUser = createAsyncThunk(
   }
 );
 
-// updateUserBattery
-// - this will update the battery of the user on swap
 export const updateUserBattery = createAsyncThunk(
   "user/updateUserBattery",
   async (data, thunkAPI) => {
     const { userId, oldBatteryId, newBatteryId, totalSwapCount } = data;
-
     try {
-      const response = await databases.updateDocument(
-        dbId, // database id
-        usersCollId, // collection id
-        userId, // doc id
-        {
-          oldBatteryId,
-          batteryId: newBatteryId,
-          totalSwapCount,
-        }
-      );
+      await databases.updateDocument(dbId, usersCollId, userId, {
+        oldBatteryId,
+        batteryId: newBatteryId,
+        totalSwapCount,
+      });
+      return data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
   }
 );
 
-// getActiveUsers
 export const getActiveUsers = createAsyncThunk(
   "user/getActiveUsers",
   async (_, thunkAPI) => {
@@ -285,7 +248,6 @@ export const getActiveUsers = createAsyncThunk(
       const resp = await databases.listDocuments(dbId, usersCollId, [
         Query.equal("userStatus", [true]),
       ]);
-      console.log(resp);
       return resp.documents;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -293,24 +255,8 @@ export const getActiveUsers = createAsyncThunk(
   }
 );
 
-// getUserByBatteryId
-// export const getUserByBattery = createAsyncThunk(
-//   "user/getUserByBattery",
-//   async (batteryId, thunkAPI) => {
-//     try {
-//       const resp = await databases.listDocuments(dbId, usersCollId, [
-//         Query.equal("batteryId", batteryId),
-//       ]);
-//       return resp;
-//     } catch (error) {
-//       return thunkAPI.rejectWithValue(error);
-//     }
-//   }
-// );
-
-// return bike from user
-export const returnBikeFrmUser = createAsyncThunk(
-  "user/returnBikeFrmUser",
+export const returnBikeFromUser = createAsyncThunk(
+  "user/returnBikeFromUser",
   async ({ userId, bikeId, batteryId, totalSwapCount }, thunkAPI) => {
     try {
       const response = await databases.updateDocument(
@@ -324,32 +270,20 @@ export const returnBikeFrmUser = createAsyncThunk(
           totalSwapCount,
         }
       );
-
-      // update the bike status and details after assigning it to the user
       if (response) {
         await thunkAPI
-          .dispatch(
-            updateBike({
-              bikeId,
-              userId: null,
-              bikeStatus: false,
-            })
-          )
-          .unwrap()
-          .then(async () => {
-            thunkAPI.dispatch(
-              updateBattery({
-                batteryId,
-                userId: null,
-                batStatus: false,
-                assignedAt: null,
-                returnedAt: new Date(),
-              })
-            );
-          });
+          .dispatch(updateBike({ bikeId, userId: null, bikeStatus: false }))
+          .unwrap();
+        await thunkAPI.dispatch(
+          updateBattery({
+            batteryId,
+            userId: null,
+            batStatus: false,
+            assignedAt: null,
+            returnedAt: new Date(),
+          })
+        );
       }
-
-      thunkAPI.dispatch(getUsersList());
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -357,30 +291,26 @@ export const returnBikeFrmUser = createAsyncThunk(
   }
 );
 
-// updatePendingAmount
 export const updatePayment = createAsyncThunk(
   "user/updatePayment",
   async ({ userId, data }, thunkAPI) => {
-    console.log(data);
     try {
       const resp = await databases.updateDocument(dbId, usersCollId, userId, {
         ...data,
       });
       return resp;
     } catch (error) {
-      console.log(error);
       return thunkAPI.rejectWithValue(error);
     }
   }
 );
 
-// deleteUser
 export const deleteUser = createAsyncThunk(
   "user/deleteUser",
   async (userId, thunkAPI) => {
     try {
-      const resp = await databases.deleteDocument(dbId, usersCollId, userId);
-      return resp;
+      await databases.deleteDocument(dbId, usersCollId, userId);
+      return userId;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
@@ -395,9 +325,10 @@ const userSlice = createSlice({
       state.isEditUser = payload;
     },
     setSelectedUser(state, { payload }) {
-      console.log("running setSelectedUser");
-      console.log(payload);
       state.selectedUser = payload;
+    },
+    setActiveFilter(state, { payload }) {
+      state.activeFilter = payload;
     },
   },
   extraReducers(builder) {
@@ -407,37 +338,32 @@ const userSlice = createSlice({
       })
       .addCase(getUserProfile.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        console.log("fetched the user profile successfully...");
-        console.log(action.payload);
         state.userProfile = action.payload;
       })
       .addCase(getUserProfile.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log(payload);
         state.errMsg = payload || "User profile not found";
       })
       .addCase(getUsersList.pending, (state) => {
         state.isUserLoading = true;
+        state.errMsg = null;
       })
-      .addCase(getUsersList.fulfilled, (state, action) => {
+      .addCase(getUsersList.fulfilled, (state, { payload, meta }) => {
         state.isUserLoading = false;
-        console.log(action.payload);
-        const { total, documents } = action.payload;
-
-        console.log(documents);
-
-        if (action.meta.arg === 0) {
+        const { total, documents } = payload;
+        if (meta.arg === 0) {
           state.usersList = documents;
         } else {
           state.usersList = [...state.usersList, ...documents];
         }
-
         state.usersListCount = total;
+        state.activeFilter = null;
+        state.errMsg =
+          documents.length === 0 && meta.arg === 0 ? "No users found" : null;
       })
       .addCase(getUsersList.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log(payload);
-        state.errMsg = payload || "Users list not found";
+        state.errMsg = payload?.message || "Users list not found";
       })
       .addCase(createUser.pending, (state) => {
         state.isUserLoading = true;
@@ -445,18 +371,16 @@ const userSlice = createSlice({
       })
       .addCase(createUser.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        console.log("created user successfully...");
-        console.log(action.payload);
+        state.usersList = [action.payload, ...state.usersList];
+        state.usersListCount += 1;
+        toast.success("Created user successfully!");
       })
       .addCase(createUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/createUser");
-
         if (payload.code === 409) {
-          toast.error("user with same name/registerId already present!");
+          toast.error("User with same name/registerId already present!");
         }
-
-        state.errMsg = payload.response.message || "could not create a user";
+        state.errMsg = payload.response?.message || "Could not create a user";
       })
       .addCase(assignBikeToUser.pending, (state) => {
         state.isUserLoading = true;
@@ -464,43 +388,36 @@ const userSlice = createSlice({
       })
       .addCase(assignBikeToUser.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        toast.success("Assigned bike successfully...");
-        console.log(action.payload);
+        toast.success("Assigned bike successfully!");
       })
       .addCase(assignBikeToUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/assignBikeToUser");
-        alert(payload.response.message);
-        console.log(payload);
-        state.errMsg = payload.response.message || "could not assign a bike";
+        toast.error(payload.response?.message || "Could not assign a bike");
+        state.errMsg = payload.response?.message || "Could not assign a bike";
       })
-      .addCase(returnBikeFrmUser.pending, (state) => {
+      .addCase(returnBikeFromUser.pending, (state) => {
         state.isUserLoading = true;
         state.errMsg = null;
       })
-      .addCase(returnBikeFrmUser.fulfilled, (state, action) => {
+      .addCase(returnBikeFromUser.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        toast.success("returned bike from the user successfully...");
-        console.log(action.payload);
+        toast.success("Returned bike from the user successfully!");
       })
-      .addCase(returnBikeFrmUser.rejected, (state, { payload }) => {
+      .addCase(returnBikeFromUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("error in user/returnBikeFrmUser");
-        console.log(payload);
+        toast.error("Error in user/returnBikeFromUser");
       })
       .addCase(updateUserBattery.pending, (state) => {
         state.isUserLoading = true;
         state.errMsg = null;
       })
-      .addCase(updateUserBattery.fulfilled, (state, action) => {
+      .addCase(updateUserBattery.fulfilled, (state) => {
         state.isUserLoading = false;
-        console.log("updated battery details of the user successfully...");
-        console.log(action.payload);
+        toast.success("Updated battery details successfully!");
       })
       .addCase(updateUserBattery.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/updateUserBattery");
-        console.log(payload);
+        toast.error("Error in user/updateUserBattery");
       })
       .addCase(getActiveUsers.pending, (state) => {
         state.isUserLoading = true;
@@ -508,111 +425,116 @@ const userSlice = createSlice({
       })
       .addCase(getActiveUsers.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        console.log("found active users");
         state.activeUsers = action.payload;
       })
       .addCase(getActiveUsers.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/getActiveUsers");
-        console.log(payload);
+        toast.error("Error in user/getActiveUsers");
       })
       .addCase(updatePayment.pending, (state) => {
         state.isUserLoading = true;
         state.errMsg = null;
       })
-      .addCase(updatePayment.fulfilled, (state, action) => {
+      .addCase(updatePayment.fulfilled, (state) => {
         state.isUserLoading = false;
-        console.log("updated the payment details of the user");
-        toast.success("updated the pending amount details");
+        toast.success("Updated the pending amount details");
       })
       .addCase(updatePayment.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/updatePayment");
-        console.log(payload);
+        toast.error("Error in user/updatePayment");
       })
       .addCase(getUserBySearch.pending, (state) => {
         state.isUserLoading = true;
         state.errMsg = null;
       })
-      .addCase(getUserBySearch.fulfilled, (state, action) => {
+      .addCase(getUserBySearch.fulfilled, (state, { payload, meta }) => {
         state.isUserLoading = false;
-        state.usersList = action.payload.documents;
+        if (meta.arg.offset === 0) {
+          state.usersList = payload.documents;
+        } else {
+          state.usersList = [...state.usersList, ...payload.documents];
+        }
+        state.usersListCount = payload.total;
+        state.activeFilter = null;
+        state.errMsg =
+          payload.documents.length === 0 && meta.arg.offset === 0
+            ? "No users found"
+            : null;
       })
       .addCase(getUserBySearch.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/getUserBySearch");
-        console.log(payload);
+        toast.error("Error in user/getUserBySearch");
+        state.errMsg = payload?.message || "Error in user/getUserBySearch";
       })
       .addCase(getUserByFilter.pending, (state) => {
         state.isUserLoading = true;
         state.errMsg = null;
       })
-      .addCase(getUserByFilter.fulfilled, (state, action) => {
+      .addCase(getUserByFilter.fulfilled, (state, { payload, meta }) => {
         state.isUserLoading = false;
-        state.usersList = action.payload.documents;
+        if (meta.arg.offset === 0) {
+          state.usersList = payload.documents;
+        } else {
+          state.usersList = [...state.usersList, ...payload.documents];
+        }
+        state.usersListCount = payload.total;
+        state.errMsg =
+          payload.documents.length === 0 && meta.arg.offset === 0
+            ? "No users available"
+            : null;
       })
       .addCase(getUserByFilter.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/getUserBySearch");
-        console.log(payload);
+        toast.error("Error in user/getUserByFilter");
+        state.errMsg = payload?.message || "Error in user/getUserByFilter";
       })
       .addCase(deleteUser.pending, (state) => {
         state.isUserLoading = true;
       })
-      .addCase(deleteUser.fulfilled, (state) => {
+      .addCase(deleteUser.fulfilled, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.success("deleted the user successfully!");
+        state.usersList = state.usersList.filter(
+          (user) => user.$id !== payload
+        );
+        state.usersListCount -= 1;
+        toast.success("Deleted the user successfully!");
       })
       .addCase(deleteUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/deleteUser");
-        console.log(payload);
+        toast.error("Error in user/deleteUser");
+        state.errMsg = payload?.message || "Error in user/deleteUser";
       })
       .addCase(editUser.pending, (state) => {
         state.isUserLoading = true;
       })
       .addCase(editUser.fulfilled, (state) => {
         state.isUserLoading = false;
-        toast.success("updated the user details successfully!");
+        toast.success("Updated the user details successfully!");
       })
       .addCase(editUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/editUser");
-        console.log(payload);
+        toast.error("Error in user/editUser");
+        state.errMsg = payload?.message || "Error in user/editUser";
       })
       .addCase(toggleUserBlock.pending, (state) => {
         state.isUserLoading = true;
       })
       .addCase(toggleUserBlock.fulfilled, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log(payload.isBlocked);
-        if (payload.isBlocked) {
-          toast.success("blocked the user successfully!");
-        } else {
-          toast.success("unblocked the user successfully!");
-        }
+        toast.success(
+          payload.isBlocked
+            ? "Blocked the user successfully!"
+            : "Unblocked the user successfully!"
+        );
       })
       .addCase(toggleUserBlock.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        console.log("error in user/toggleUserBlock");
-        console.log(payload);
+        toast.error("Error in user/toggleUserBlock");
+        state.errMsg = payload?.message || "Error in user/toggleUserBlock";
       });
-    // .addCase(getUserByBattery.pending, (state) => {
-    //   state.isUserLoading = true;
-    // })
-    // .addCase(getUserByBattery.fulfilled, (state, { payload }) => {
-    //   state.isUserLoading = false;
-    //   console.log(payload);
-    //   state.selectedUser = payload.documents[0];
-    //   console.log(state.selectedUser);
-    // })
-    // .addCase(getUserByBattery.rejected, (state, { payload }) => {
-    //   state.isUserLoading = false;
-    //   console.log("error in user/getUserByBattery");
-    //   console.log(payload);
-    // });
   },
 });
 
-export const { setEditUser, setSelectedUser } = userSlice.actions;
+export const { setEditUser, setSelectedUser, setActiveFilter } =
+  userSlice.actions;
 export default userSlice.reducer;

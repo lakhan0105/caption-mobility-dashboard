@@ -42,10 +42,33 @@ export const getCompanyNames = createAsyncThunk(
   "company/getCompanyNames",
   async (_, thunkAPI) => {
     try {
-      const resp = await databases.listDocuments(dbId, companyCollId);
-      return resp.documents;
+      let allDocuments = [];
+      const limit = 100; // Increase limit per request
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const resp = await databases.listDocuments(dbId, companyCollId, [
+          Query.limit(limit),
+          Query.offset(offset),
+        ]);
+        allDocuments = [...allDocuments, ...resp.documents];
+        offset += limit;
+        hasMore = resp.documents.length === limit; // More documents exist if we got a full batch
+      }
+
+      console.log(
+        "Fetched company names:",
+        allDocuments.map((doc) => doc.companyName)
+      );
+      return allDocuments;
     } catch (error) {
-      return thunkAPI.rejectWithValue(error);
+      console.error("Error fetching company names:", error);
+      return thunkAPI.rejectWithValue({
+        message: error.message,
+        code: error.code,
+        details: error,
+      });
     }
   }
 );
