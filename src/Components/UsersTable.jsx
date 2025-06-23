@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   GenericTable,
   OptionsModal,
@@ -24,10 +24,7 @@ import {
   getUsersList,
 } from "../features/user/UserSlice";
 
-// This component will accept the user data, we need pass the headings and cols for mobile and large screens
-// we pass everything as a children to the genricTable component
-
-function UsersTable({ data }) {
+function UsersTable({ data, lastUserElementRef }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
   const { selectedUser } = useSelector((state) => state.userReducer);
   const { optionsModalState } = useSelector((state) => state.modalReducer);
@@ -44,6 +41,7 @@ function UsersTable({ data }) {
   // showOptionsModal
   function handleOptionsBtn(e, data) {
     e.preventDefault();
+    e.stopPropagation(); // Prevent Link navigation when clicking options
 
     if (optionsModalState) {
       dispatch(hideOptionsModal());
@@ -54,34 +52,33 @@ function UsersTable({ data }) {
     }
   }
 
-  // runs when the edit btn is clicked on a user list
-  // opens a modal (userForm) to edit the user information
+  // Runs when the edit btn is clicked on a user list
   function showEditForm(e) {
     e.preventDefault();
+    e.stopPropagation(); // Prevent Link navigation
 
-    // set the isEdit to true in userSlice
     dispatch(setEditUser(true));
-
-    // show modal -> opens a modal with users form
     dispatch(showModal());
   }
 
-  // function to handle deletion of a user from users list
+  // Function to handle deletion of a user from users list
   function handleUserDelete(e) {
     e.preventDefault();
+    e.stopPropagation(); // Prevent Link navigation
+
     dispatch(deleteUser(selectedUser?.$id))
       .unwrap()
       .then(() => {
-        dispatch(getUsersList());
+        dispatch(getUsersList(0)); // Reset list after deletion
         dispatch(hideOptionsModal());
       });
   }
 
-  // openBlockModal
-  // - opens a modal that accepts reason why the user is blocked
+  // Open block modal
   function openBlockModal(e) {
     e.preventDefault();
-    console.log(selectedUser);
+    e.stopPropagation(); // Prevent Link navigation
+
     dispatch(setIsBlockFrom(true));
     dispatch(showModal());
     dispatch(hideOptionsModal());
@@ -104,10 +101,14 @@ function UsersTable({ data }) {
             totalSwapCount,
             pendingAmount,
           } = item;
+          const isLastUser = index === data.length - 1;
 
           return (
             <Link key={$id} to={`/dashboard/users/${$id}`}>
-              <TableRow cols={userCols}>
+              <TableRow
+                cols={userCols}
+                ref={isLastUser ? lastUserElementRef : null}
+              >
                 {/* SL NUMBER */}
                 <p className="text-[0.7rem] w-[20px] h-[20px] font-medium border bg-indigo-950 text-white flex items-center justify-center rounded-2xl mt-0.5">
                   {index + 1}
@@ -115,25 +116,21 @@ function UsersTable({ data }) {
 
                 {/* USER NAME/BASIC DETAILS */}
                 {isMobile ? (
-                  <div className="md:hidden flex  gap-2">
+                  <div className="md:hidden flex gap-2">
                     <div>
                       <h2 className="font-medium text-md capitalize">
                         {userName}
                       </h2>
-
                       <div className="leading-4 mt-0.5">
-                        {/* total swap count for the current bike */}
                         {totalSwapCount > 0 ? (
                           <p className="text-[10px]">
-                            {totalSwapCount} {""}
+                            {totalSwapCount}{" "}
                             {totalSwapCount <= 1 ? "swap" : "swaps"} with
                             current bike
                           </p>
                         ) : (
                           <p className="text-[10px]"></p>
                         )}
-
-                        {/* pendingAmount if present */}
                         {pendingAmount > 0 && (
                           <p className="text-[10px] font-medium text-red-700">
                             pending: ₹{pendingAmount}
@@ -163,15 +160,11 @@ function UsersTable({ data }) {
                 <p className="flex justify-center">{userCompany}</p>
                 {!isMobile && <p>{userPhone}</p>}
 
-                <button
-                  onClick={(e) => {
-                    handleOptionsBtn(e, item);
-                  }}
-                >
+                <button onClick={(e) => handleOptionsBtn(e, item)}>
                   <SlOptionsVertical />
                 </button>
 
-                {optionsModalState && (
+                {optionsModalState && selectedUser?.$id === $id && (
                   <OptionsModal
                     handleEditBtn={showEditForm}
                     handleDeleteBtn={handleUserDelete}
