@@ -157,7 +157,7 @@ function UsersTable({ data, lastUserElementRef }) {
                   )}
                 </div>
 
-                <p className="flex justify-center">{userCompany}</p>
+                <p className="flex justify-center capitalize">{userCompany}</p>
                 {!isMobile && <p>{userPhone}</p>}
 
                 <button onClick={(e) => handleOptionsBtn(e, item)}>

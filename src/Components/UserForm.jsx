@@ -7,7 +7,10 @@ import { createUser, editUser, getUsersList } from "../features/user/UserSlice";
 import { ID } from "appwrite";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import toast from "react-hot-toast";
-import { addCompanyIfNew } from "../features/company/companySlice";
+import {
+  addCompanyIfNew,
+  getCompanyNames,
+} from "../features/company/companySlice";
 
 function UserForm() {
   const { isEditUser, selectedUser } = useSelector(
@@ -55,14 +58,32 @@ function UserForm() {
 
   // postUserSuccess
   function postUserSuccess(msg, companyName) {
-    if (!companyName) return;
+    if (!companyName) {
+      toast.error("Company name is required");
+      return;
+    }
 
-    dispatch(addCompanyIfNew(companyName.toLowerCase()));
-
-    setUserInputState({ userName: "", userPhone: "", userCompany: "" });
-    dispatch(closeModal());
-    toast.success(msg);
-    dispatch(getUsersList());
+    dispatch(addCompanyIfNew(companyName.toLowerCase()))
+      .unwrap()
+      .then(() => {
+        dispatch(getCompanyNames()); // Refresh company names
+        setUserInputState({
+          userName: "",
+          userRegisterId: "",
+          userPhone: "",
+          userCompany: "",
+          userLocation: "",
+        });
+        dispatch(closeModal());
+        toast.success(msg);
+        dispatch(getUsersList());
+      })
+      .catch((error) => {
+        toast.error(
+          `Failed to add company: ${error.message || "Unknown error"}`
+        );
+        console.error("addCompanyIfNew error:", error);
+      });
   }
 
   // handleAddUser

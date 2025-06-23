@@ -1,98 +1,109 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getCompanyNames } from "../features/company/companySlice";
-import { getUserByFilter, getUsersList } from "../features/user/UserSlice";
+import {
+  getUserByFilter,
+  getUsersList,
+  setActiveFilter,
+} from "../features/user/UserSlice";
 import { CiCirclePlus } from "react-icons/ci";
+import toast from "react-hot-toast";
 
 function Filters() {
   const dispatch = useDispatch();
-
   const [activeBtn, setActiveBtn] = useState("all");
-
-  // state to store and set the filter button names
   const [btnNames, setBtnNames] = useState(["all", "active", "pending"]);
-
-  // function load companies buttons
-  function loadCompaniesBtns() {
-    dispatch(getCompanyNames())
-      .unwrap()
-      .then(() => {
-        // after the companies have been loaded, hide the plus button
-        const plusBtn = document.querySelector(".plus-btn");
-        if (plusBtn) {
-          plusBtn.classList.add("hidden");
-        }
-      });
-  }
-
-  // grab the companyNames state from the companyReducer
   const { companyNames, isLoading } = useSelector(
     (state) => state.companyReducer
   );
 
-  // runs when the companyNames changes
+  // Fetch company names on mount
+  useEffect(() => {
+    dispatch(getCompanyNames())
+      .unwrap()
+      .catch((error) => {
+        toast.error("Failed to load company names");
+        console.error("Failed to fetch company names:", error);
+      });
+  }, [dispatch]);
+
+  // Update btnNames when companyNames changes
   useEffect(() => {
     if (companyNames) {
       setBtnNames((prev) => {
-        return [...btnNames, ...companyNames];
+        const updatedBtnNames = [...new Set([...prev, ...companyNames])];
+        console.log("Updated btnNames:", updatedBtnNames);
+
+        return updatedBtnNames;
       });
     }
   }, [companyNames]);
 
-  // handleFilterBtn
-  function handleFilterbtn(e) {
+  // Handle filter button click
+  function handleFilterBtn(e) {
     const name = e.target.name;
-
+    console.log(name);
     setActiveBtn(name);
 
     if (name === "all") {
-      dispatch(getUsersList());
+      dispatch(getUsersList(0));
+      dispatch(setActiveFilter(null));
       return;
     }
 
+    let filter = {};
     if (name === "active") {
-      dispatch(
-        getUserByFilter({ attributeName: "userStatus", attributeValue: true })
-      );
+      filter = { attributeName: "userStatus", attributeValue: true };
     } else if (name === "pending") {
-      dispatch(
-        getUserByFilter({ attributeName: "pendingAmount", attributeValue: "" })
-      );
+      filter = { attributeName: "pendingAmount", attributeValue: "" };
     } else {
-      dispatch(
-        getUserByFilter({ attributeName: "userCompany", attributeValue: name })
-      );
+      filter = { attributeName: "userCompany", attributeValue: name };
     }
+
+    dispatch(setActiveFilter(filter));
+    dispatch(getUserByFilter({ ...filter, offset: 0 }));
+  }
+
+  // Handle plus button click to reload company names
+  function handleReloadCompanies() {
+    dispatch(getCompanyNames())
+      .unwrap()
+      .then(() => {
+        toast.success("Refreshed company names");
+      })
+      .catch((error) => {
+        toast.error("Failed to refresh company names");
+        console.error("Failed to reload company names:", error);
+      });
   }
 
   if (isLoading) {
-    return <h2>Loading...</h2>;
+    return <h2>Loading filters...</h2>;
+  }
+
+  if (!companyNames) {
+    return <h2>No companies available</h2>;
   }
 
   return (
-    <div className="borde max-w-[475px] mt-7 overflow-x-scroll no-scrollbar">
-      <div className="text-xs w-max overflow-x-scroll flex gap-4 whitespace-nowrap pr-24">
-        {btnNames &&
-          btnNames?.map((btnName, index) => {
-            return (
-              <button
-                className={`border border-white/50 rounded-xl px-3 py-1 capitalize  ${
-                  activeBtn === btnName
-                    ? "bg-white/90 text-black"
-                    : "text-white/95"
-                }`}
-                key={index}
-                onClick={handleFilterbtn}
-                name={btnName}
-              >
-                {btnName}
-              </button>
-            );
-          })}
-
+    <div className="max-w-[475px] mt-7 overflow-x-scroll no-scrollbar">
+      <div className="text-xs w-max flex gap-4 whitespace-nowrap pr-24">
+        {btnNames?.map((btnName, index) => (
+          <button
+            className={`border border-white/50 rounded-xl px-3 py-1 capitalize ${
+              activeBtn === btnName ? "bg-white/90 text-black" : "text-white/95"
+            }`}
+            key={index}
+            onClick={handleFilterBtn}
+            name={btnName}
+          >
+            {btnName}
+          </button>
+        ))}
         <button
           className="plus-btn text-2xl text-white/85"
-          onClick={loadCompaniesBtns}
+          onClick={handleReloadCompanies}
+          title="Refresh company names"
         >
           <CiCirclePlus />
         </button>
