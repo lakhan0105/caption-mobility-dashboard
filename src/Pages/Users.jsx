@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import {
   BlockForm,
   Filters,
@@ -28,40 +28,63 @@ function Users() {
   );
   const { isBlockForm } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
+  const observer = useRef();
+  const [isSearchingOrFiltering, setIsSearchingOrFiltering] =
+    React.useState(false);
+
+  // Reference to the last user element
+  const lastUserElementRef = useCallback(
+    (node) => {
+      if (isUserLoading || isSearchingOrFiltering) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && usersList?.length < usersListCount) {
+            dispatch(getUsersList(usersList?.length));
+          }
+        },
+        { rootMargin: "100px" } // Trigger 100px before the last row is fully visible
+      );
+      if (node) observer.current.observe(node);
+    },
+    [
+      isUserLoading,
+      isSearchingOrFiltering,
+      usersList?.length,
+      usersListCount,
+      dispatch,
+    ]
+  );
 
   useEffect(() => {
     if (!usersList || !usersList?.length) {
       dispatch(getUsersList(0));
     }
     dispatch(hideOptionsModal());
-  }, []);
+  }, [dispatch, usersList]);
 
-  // open the modal when clicked on add new user
+  // Open the modal when clicked on add new user
   function handleNewUser() {
-    // hide the block Form if it is rendering in the place of userForm
     dispatch(setIsBlockFrom(false));
-
-    // set the isEditUser to false
     dispatch(setEditUser(false));
-
-    // modal has the UserForm that adds a new user
     dispatch(showModal());
   }
 
-  // handleUsersSearch
+  // Handle users search
   function handleUsersSearch(inputText) {
-    dispatch(getUserBySearch(inputText));
-  }
-
-  // handleLoadMore
-  function handleLoadMore() {
-    dispatch(getUsersList(usersList?.length));
+    if (inputText) {
+      setIsSearchingOrFiltering(true);
+      dispatch(getUserBySearch(inputText));
+    } else {
+      setIsSearchingOrFiltering(false);
+      dispatch(getUsersList(0)); // Reset to full list when search is cleared
+    }
   }
 
   return (
     <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
       <div className="max-w-[900px] overflow-hidden">
-        {/* PAGE TOP SECTION*/}
+        {/* PAGE TOP SECTION */}
         <PageHeader
           heading={`users list - ${usersListCount}`}
           handleFunction={handleNewUser}
@@ -70,29 +93,16 @@ function Users() {
             handleSearch={handleUsersSearch}
             placeHolder={"find users"}
           />
-
-          {/* add filter buttons here */}
           <Filters />
         </PageHeader>
 
-        {/* users table */}
-        {isUserLoading ? (
-          <h2 className="text-center">Loading...</h2>
-        ) : (
-          <UsersTable data={usersList} />
-        )}
+        {/* Users table */}
+        <UsersTable data={usersList} lastUserElementRef={lastUserElementRef} />
 
-        {/* load more button */}
-        <div className="text-center">
-          {usersList?.length !== usersListCount && !isUserLoading && (
-            <button
-              onClick={handleLoadMore}
-              className="mb-28 border px-5 rounded py-1 bg-white text-sm"
-            >
-              load more
-            </button>
-          )}
-        </div>
+        {/* Optional: Show loading indicator */}
+        {isUserLoading && (
+          <div className="text-center py-4">Loading more users...</div>
+        )}
 
         <Modal>{isBlockForm ? <BlockForm /> : <UserForm />}</Modal>
       </div>

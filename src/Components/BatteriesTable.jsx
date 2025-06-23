@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
+import React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import GenericTable from "./GenericTable";
 import TableHeader from "./TableHeader";
-import { useDispatch, useSelector } from "react-redux";
 import TableRow from "./TableRow";
 import { SlOptionsVertical } from "react-icons/sl";
 import OptionsModal from "./OptionsModal";
@@ -12,7 +12,6 @@ import {
   showModal,
   showOptionsModal,
 } from "../features/modal/modalSlice";
-
 import {
   deleteBattery,
   getBatteriesList,
@@ -20,36 +19,36 @@ import {
   setSelectedBattery,
 } from "../features/battery/batterySlice";
 
-function BatteriesTable({ data }) {
+function BatteriesTable({ data, lastBatteryElementRef }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
-  const { optionsModalState } = useSelector((state) => state.modalReducer);
+  const { optionsModalState, isLoading } = useSelector(
+    (state) => state.modalReducer
+  );
   const { selectedBattery } = useSelector((state) => state.batteryReducer);
-
   const dispatch = useDispatch();
 
   const batteryTableHeadings = isMobile
-    ? ["#", "batteryNum", "status"]
-    : ["#", "batteryNum", "status"];
+    ? ["#", "batteryNum", "status", ""]
+    : ["#", "batteryNum", "status", ""];
 
   const batteryCols = isMobile
     ? "0.1fr 0.6fr 0.5fr 0.05fr"
-    : "0.1fr 1fr 0.5fr ";
+    : "0.1fr 1fr 0.5fr 0.05fr";
 
   // handleOptionsBtn
   function handleOptionsBtn(e, data) {
     e.preventDefault();
-
     if (optionsModalState) {
       dispatch(hideOptionsModal());
       dispatch(setEditBattery(false));
     } else {
       dispatch(showOptionsModal());
+      dispatch(setOptionsModalPosition({ x: e.clientX, y: e.clientY }));
       dispatch(setSelectedBattery(data));
     }
   }
 
   // handleEditBat
-  // opens a modal to edit the battery details
   function handleEditBat(e) {
     e.preventDefault();
     dispatch(setEditBattery(true));
@@ -60,26 +59,26 @@ function BatteriesTable({ data }) {
   // handleDeleteBat
   function handleDeleteBat(e) {
     e.preventDefault();
-
     dispatch(deleteBattery(selectedBattery?.$id))
       .unwrap()
       .then(() => {
         dispatch(hideOptionsModal());
-        dispatch(getBatteriesList());
+        dispatch(getBatteriesList(0)); // Reset list after deletion
       });
   }
 
   // handleDownloadQr
-  // - runs when get qr button is clicked
   function openQrCodeComp(e) {
     e.preventDefault();
     console.log("download qr code");
     console.log(selectedBattery);
-
-    // generate a qr code and download
     dispatch(setIsQrCodeComp(true));
     dispatch(showModal());
     dispatch(hideOptionsModal());
+  }
+
+  if (isLoading && !data?.length) {
+    return <h2 className="text-center">Loading...</h2>;
   }
 
   return (
@@ -89,17 +88,15 @@ function BatteriesTable({ data }) {
       {/* TABLE DATA */}
       <div>
         {data?.map((item, index) => {
-          const {
-            $id,
-            batRegNum,
-            batStatus,
-            currOwner,
-            assignedAt,
-            returnedAt,
-          } = item;
+          const { $id, batRegNum, batStatus } = item;
+          const isLastBattery = index === data.length - 1;
 
           return (
-            <TableRow cols={batteryCols} key={$id}>
+            <TableRow
+              cols={batteryCols}
+              key={$id}
+              ref={isLastBattery ? lastBatteryElementRef : null}
+            >
               {/* SL NUMBER */}
               <p className="text-[0.7rem] w-[20px] h-[20px] font-medium border bg-indigo-950 text-white flex items-center justify-center rounded-2xl mt-0.5">
                 {index + 1}
@@ -121,11 +118,7 @@ function BatteriesTable({ data }) {
               </div>
 
               {/* OPTIONS BUTTON */}
-              <button
-                onClick={(e) => {
-                  handleOptionsBtn(e, item);
-                }}
-              >
+              <button onClick={(e) => handleOptionsBtn(e, item)}>
                 <SlOptionsVertical />
               </button>
             </TableRow>
@@ -133,7 +126,7 @@ function BatteriesTable({ data }) {
         })}
       </div>
 
-      {optionsModalState && (
+      {optionsModalState && selectedBattery?.$id && (
         <OptionsModal
           handleEditBtn={handleEditBat}
           handleDeleteBtn={handleDeleteBat}

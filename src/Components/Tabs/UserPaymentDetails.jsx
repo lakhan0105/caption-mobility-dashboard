@@ -1,4 +1,3 @@
-import React from "react";
 import InfoCardOne from "../InfoCardOne";
 
 import { MdOutlinePayment } from "react-icons/md";

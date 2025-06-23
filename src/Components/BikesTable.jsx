@@ -6,7 +6,6 @@ import TableRow from "./TableRow";
 import { SlOptionsVertical } from "react-icons/sl";
 import {
   deleteBike,
-  getBikes,
   setEditBike,
   setSelectedBike,
 } from "../features/bike/bikeSlice";
@@ -19,27 +18,24 @@ import {
 import OptionsModal from "./OptionsModal";
 import toast from "react-hot-toast";
 
-function BikesTable({ data }) {
+function BikesTable({ data, lastBikeElementRef }) {
   const { isMobile } = useSelector((state) => state.deviceReducer);
-  const { selectedBike, bikesList, isLoading } = useSelector(
-    (state) => state.bikeReducer
-  );
+  const { selectedBike, isLoading } = useSelector((state) => state.bikeReducer);
   const { optionsModalState } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
 
-  // data to pass in tableHeader and body
+  // Data for table header and body
   const bikesTableHeadings = isMobile
     ? ["#", "bike number", "status"]
     : ["#", "bike number", "status", "curr owner", "assigned at"];
 
   const bikesTableCols = isMobile
     ? "0.1fr 0.6fr 0.5fr 0.05fr"
-    : "0.1fr 0.6fr 0.5fr 0.5fr 0.5fr";
+    : "0.1fr 0.6fr 0.5fr 0.5fr 0.5fr 0.05fr";
 
-  // handleOptionsBtn
+  // Handle options button
   function handleOptionsBtn(e, data) {
     e.preventDefault();
-
     if (optionsModalState) {
       dispatch(hideOptionsModal());
       dispatch(setEditBike(false));
@@ -50,7 +46,7 @@ function BikesTable({ data }) {
     }
   }
 
-  // handle edit btn
+  // Handle edit button
   function handleEditBike(e) {
     e.preventDefault();
     dispatch(setEditBike(true));
@@ -58,26 +54,23 @@ function BikesTable({ data }) {
     dispatch(hideOptionsModal());
   }
 
-  // handle delete btn
+  // Handle delete button
   function handleDeleteBike(e) {
     e.preventDefault();
-
     if (selectedBike?.currOwner) {
       toast.error(
-        "The bike is active and cannot be delete! please make it inactive"
+        "The bike is active and cannot be deleted! Please make it inactive"
       );
       return;
     }
-
     dispatch(deleteBike(selectedBike?.$id))
       .unwrap()
       .then(() => {
         dispatch(hideOptionsModal());
-        dispatch(getBikes(bikesList?.length));
       });
   }
 
-  if (isLoading) {
+  if (isLoading && !data?.length) {
     return <h2 className="text-center">Loading...</h2>;
   }
 
@@ -95,15 +88,20 @@ function BikesTable({ data }) {
             assignedAt,
             returnedAt,
           } = item;
+          const isLastBike = index === data.length - 1;
 
           return (
-            <TableRow cols={bikesTableCols} key={item?.$id}>
+            <TableRow
+              cols={bikesTableCols}
+              key={$id}
+              ref={isLastBike ? lastBikeElementRef : null}
+            >
               {/* SL NUMBER */}
               <p className="text-[0.7rem] w-[20px] h-[20px] font-medium border bg-indigo-950 text-white flex items-center justify-center rounded-2xl mt-0.5">
                 {index + 1}
               </p>
 
-              <p>{item?.bikeRegNum?.toUpperCase()}</p>
+              <p>{bikeRegNum?.toUpperCase()}</p>
 
               <div className="flex gap-4 justify-center text-xs">
                 {bikeStatus ? (
@@ -119,11 +117,7 @@ function BikesTable({ data }) {
               {!isMobile && <p>{assignedAt ? assignedAt : "-"}</p>}
 
               {/* OPTIONS BUTTON */}
-              <button
-                onClick={(e) => {
-                  handleOptionsBtn(e, item);
-                }}
-              >
+              <button onClick={(e) => handleOptionsBtn(e, item)}>
                 <SlOptionsVertical />
               </button>
             </TableRow>
@@ -131,7 +125,7 @@ function BikesTable({ data }) {
         })}
       </div>
 
-      {optionsModalState && (
+      {optionsModalState && selectedBike?.$id && (
         <OptionsModal
           optionsModalState={optionsModalState}
           handleEditBtn={handleEditBike}

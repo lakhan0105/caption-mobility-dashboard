@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import {
   BatteriesTable,
   Modal,
@@ -12,26 +12,45 @@ import {
   setEditBattery,
 } from "../features/battery/batterySlice";
 import { showModal } from "../features/modal/modalSlice";
-import { GiBatteries } from "react-icons/gi";
+// import { GiBattery } from "react-icons/gi"; // Corrected import
 
 function Batteries() {
-  const { batteriesList, batteriesListCount, selectedBattery } = useSelector(
-    (state) => state.batteryReducer
-  );
+  const { batteriesList, batteriesListCount, isLoading, selectedBattery } =
+    useSelector((state) => state.batteryReducer);
   const { isQrCodeComp } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
+  const observer = useRef();
+
+  // Reference to the last battery
+  const lastBatteryElementRef = useCallback(
+    (node) => {
+      if (isLoading) return;
+      console.log("Last battery row ref:", node); // Debug log
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver(
+        (entries) => {
+          if (
+            entries[0].isIntersecting &&
+            batteriesList?.length < batteriesListCount
+          ) {
+            dispatch(getBatteriesList(batteriesList?.length));
+          }
+        },
+        { rootMargin: "100px" } // Trigger 100px before the last row is visible
+      );
+      if (node) observer.current.observe(node);
+    },
+    [isLoading, batteriesList?.length, batteriesListCount, dispatch]
+  );
 
   useEffect(() => {
-    dispatch(getBatteriesList(0));
-  }, []);
-
-  // handleLoadMore
-  function handleLoadMore() {
-    dispatch(getBatteriesList(batteriesList.length));
-  }
+    if (!batteriesList || !batteriesList?.length) {
+      dispatch(getBatteriesList(0));
+    }
+  }, [dispatch, batteriesList]);
 
   return (
-    <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)] pb-28">
+    <section className="w-full max-w-[900px] mx-auto md:ml-[300px] md:w-[calc(100%-300px)] pb-28">
       <div className="max-w-[900px]">
         {/* PAGE HEADER */}
         <PageHeader
@@ -43,24 +62,21 @@ function Batteries() {
             dispatch(setEditBattery(false));
             dispatch(showModal());
           }}
-          icon={<GiBatteries />}
+          // icon={<GiBattery />}
         />
 
-        {/* batteries table */}
-        {/* {usersList && <UsersTable data={usersList} />} */}
-        <BatteriesTable data={batteriesList} />
+        {/* Batteries table */}
+        {batteriesList && (
+          <BatteriesTable
+            data={batteriesList}
+            lastBatteryElementRef={lastBatteryElementRef}
+          />
+        )}
 
-        {/* load more button */}
-        <div className="text-center">
-          {batteriesList?.length !== batteriesListCount && (
-            <button
-              onClick={handleLoadMore}
-              className="mb-28 border px-5 rounded py-1 bg-white text-sm"
-            >
-              load more
-            </button>
-          )}
-        </div>
+        {/* Loading indicator */}
+        {isLoading && batteriesList?.length > 0 && (
+          <div className="text-center py-4">Loading more batteries...</div>
+        )}
 
         <Modal>
           {isQrCodeComp ? (
