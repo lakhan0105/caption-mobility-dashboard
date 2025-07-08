@@ -21,6 +21,8 @@ const initialState = {
   activeFilter: null,
 };
 
+let limit = 20;
+
 export const createUser = createAsyncThunk(
   "user/createUser",
   async (data, thunkAPI) => {
@@ -31,6 +33,7 @@ export const createUser = createAsyncThunk(
       userPhone,
       userCompany,
       userLocation,
+      userPhotoId,
     } = data;
     const permissions = [
       Permission.read(Role.team(adminTeamId)),
@@ -42,7 +45,14 @@ export const createUser = createAsyncThunk(
         dbId,
         usersCollId,
         docID,
-        { userName, userRegisterId, userPhone, userCompany, userLocation },
+        {
+          userName,
+          userRegisterId,
+          userPhone,
+          userCompany,
+          userLocation,
+          userPhotoId,
+        },
         permissions
       );
       return resp;

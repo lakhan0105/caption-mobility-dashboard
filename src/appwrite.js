@@ -1,4 +1,4 @@
-import { Client, Account, Databases } from "appwrite";
+import { Client, Account, Databases, Storage } from "appwrite";
 
 // import
 const appwriteEndpoint = import.meta.env.VITE_API_ENDPOINT;
@@ -10,5 +10,6 @@ const client = new Client()
 
 const account = new Account(client);
 const databases = new Databases(client);
+const storage = new Storage(client);
 
-export { client, account, databases };
+export { client, account, databases, storage };

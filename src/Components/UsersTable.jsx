@@ -35,7 +35,7 @@ function UsersTable({ data, lastUserElementRef }) {
     : ["#", "user", "status", "phone", "company"];
 
   const userCols = isMobile
-    ? "0.1fr 0.6fr 0.5fr 0.4fr 0.05fr"
+    ? "0.1fr 0.6fr 0.5fr 0.22fr 0.05fr"
     : "0.1fr 1fr 0.5fr 1fr 0.5fr 0.05fr";
 
   // showOptionsModal
@@ -157,7 +157,9 @@ function UsersTable({ data, lastUserElementRef }) {
                   )}
                 </div>
 
-                <p className="flex justify-center capitalize">{userCompany}</p>
+                <p className="flex justify-cente capitalize text-xs">
+                  {userCompany}
+                </p>
                 {!isMobile && <p>{userPhone}</p>}
 
                 <button onClick={(e) => handleOptionsBtn(e, item)}>

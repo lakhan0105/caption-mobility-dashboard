@@ -1,8 +1,10 @@
+import { Button } from "@mui/material";
 import React from "react";
 
 function SubmitBtn({ text, handleSubmit, disabled }) {
   return (
-    <button
+    <Button
+      variant="contained"
       type="submit"
       className={`w-full ${
         disabled ? "bg-blue-300" : "bg-blue-500"
@@ -11,7 +13,7 @@ function SubmitBtn({ text, handleSubmit, disabled }) {
       disabled={disabled}
     >
       {text}
-    </button>
+    </Button>
   );
 }
 
