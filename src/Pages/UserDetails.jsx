@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 
 import { FaPhoneAlt } from "react-icons/fa";
 import { FaRegMessage } from "react-icons/fa6";
-import { databases } from "../appwrite";
+import { databases, storage } from "../appwrite";
 import SimpleBtn from "../Components/Buttons/SimpleBtn";
 import { AssignForm, EditPaymentForm, Modal, SwapForm } from "../Components";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,6 +11,8 @@ import { returnBikeFromUser } from "../features/user/UserSlice";
 import Tabs from "../Components/Tabs/Tabs";
 import { Avatar } from "@mui/material";
 import { deepPurple } from "@mui/material/colors";
+import UserPhoto from "../Components/UserPhoto";
+const userBucketId = import.meta.env.VITE_USER_BUCKET_ID;
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -53,7 +55,7 @@ function UserDetails() {
     // run the returnBikeFrmUser
     // - if successfull run the getUser() to refresh the data again
     dispatch(
-      returnBikeFrmUser({
+      returnBikeFromUser({
         userId: userDetails?.$id,
         bikeId: userDetails?.bikeId,
         batteryId: userDetails?.batteryId,
@@ -71,7 +73,12 @@ function UserDetails() {
   }
 
   if (userDetails) {
-    const { $id, userName, userRegisterId, isBlocked, userNotes } = userDetails;
+    const { $id, userName, userRegisterId, isBlocked, userNotes, userPhotoId } =
+      userDetails;
+
+    const userPhotoUrl = storage.getFilePreview(userBucketId, userPhotoId);
+
+    console.log(userPhotoUrl);
 
     return (
       <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
@@ -82,18 +89,7 @@ function UserDetails() {
  px-5 text-white"
           >
             {/* PROFILE ICON */}
-            <div className="text-[85px]">
-              <Avatar
-                sx={{
-                  width: "85px",
-                  height: "85px",
-                  fontSize: "2.3rem",
-                  bgcolor: deepPurple[400],
-                }}
-              >
-                {userName[0].toUpperCase()}
-              </Avatar>
-            </div>
+            <UserPhoto fileId={userPhotoId} />
 
             {/* BASIC INFO */}
             <div className="mt-0">

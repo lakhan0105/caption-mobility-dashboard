@@ -11,6 +11,9 @@ import {
   addCompanyIfNew,
   getCompanyNames,
 } from "../features/company/companySlice";
+import { Button, TextField } from "@mui/material";
+import { storage } from "../appwrite";
+const userBucketId = import.meta.env.VITE_USER_BUCKET_ID;
 
 function UserForm() {
   const { isEditUser, selectedUser } = useSelector(
@@ -26,6 +29,8 @@ function UserForm() {
     userCompany: "",
     userLocation: "",
   });
+
+  const [userPhoto, setUserPhoto] = useState(null);
 
   // when this component load, check if isEdit is true, if true then automatically fill the form with the details, so the user can edit it
   useEffect(() => {
@@ -87,11 +92,30 @@ function UserForm() {
   }
 
   // handleAddUser
-  function handleAddUser(e) {
+  async function handleAddUser(e) {
     e.preventDefault();
     const docID = ID.unique();
 
     console.log("running handleAddUser...");
+
+    // save the user photo before saving his information
+    let imageId = null;
+
+    if (userPhoto) {
+      try {
+        const imageUpload = await storage.createFile(
+          userBucketId,
+          ID.unique(),
+          userPhoto
+        );
+        imageId = imageUpload.$id;
+        console.log(imageId);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        toast.error("Failed to upload photo");
+        return;
+      }
+    }
 
     const userData = {
       docID,
@@ -100,6 +124,7 @@ function UserForm() {
       userPhone: userInputState.userPhone,
       userCompany: userInputState.userCompany.toLowerCase(),
       userLocation: userInputState.userLocation.toLowerCase(),
+      userPhotoId: imageId,
     };
 
     dispatch(createUser(userData))
@@ -138,7 +163,7 @@ function UserForm() {
 
   return (
     <form
-      className="bg-white w-full max-w-[350px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative"
+      className="bg-white w-full max-w-[380px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative "
       onSubmit={!isEditUser ? handleAddUser : handleEditUser}
     >
       <button
@@ -148,52 +173,69 @@ function UserForm() {
         close
       </button>
 
-      <InputRow
-        name={"userName"}
-        type={"text"}
-        label={"Full Name"}
-        required={true}
-        handleChange={handleChange}
-        value={userInputState.userName}
+      <h2 className="text-2xl mb-2">User Details</h2>
+
+      {/* USER NAME */}
+      <TextField
+        name="userName"
+        required
+        size="small"
+        onChange={handleChange}
+        value={userInputState?.userName}
+        id="outlined-basic"
+        label="Full Name"
+        variant="outlined"
       />
 
-      <InputRow
-        name={"userRegisterId"}
-        type={"text"}
-        label={"Register Id"}
-        required={true}
-        handleChange={handleChange}
-        value={userInputState.userRegisterId}
+      {/* REGISTER ID */}
+      <TextField
+        name="userRegisterId"
+        size="small"
+        label="Register Id"
+        required
+        onChange={handleChange}
+        value={userInputState?.userRegisterId}
       />
 
-      <InputRow
-        name={"userPhone"}
-        type={"text"}
-        label={"Phone Number"}
-        required={true}
-        handleChange={handleChange}
-        value={userInputState.userPhone}
+      {/* PHONE */}
+      <TextField
+        name="userPhone"
+        size="small"
+        label="Phone"
+        required
+        onChange={handleChange}
+        value={userInputState?.userPhone}
       />
 
-      <InputRow
-        name={"userCompany"}
-        type={"text"}
-        label={"Company"}
-        required={true}
-        handleChange={handleChange}
-        value={userInputState.userCompany}
+      {/* COMPANY*/}
+      <TextField
+        name="userCompany"
+        size="small"
+        label="Company"
+        required
+        onChange={handleChange}
+        value={userInputState?.userCompany}
       />
 
       {/* USER LOCATION */}
-      <InputRow
-        name={"userLocation"}
-        type={"text"}
-        label={"Location"}
-        handleChange={handleChange}
-        value={userInputState.userLocation}
+      <TextField
+        name="userLocation"
+        size="small"
+        label="Location"
+        required
+        onChange={handleChange}
+        value={userInputState?.userLocation}
       />
 
-      <SubmitBtn text={isEditUser ? "update" : "create a new user"} />
+      {/* USER PHOTO INPUT */}
+      <TextField
+        name="userPhoto"
+        type="file"
+        inputProps={{ accept: "image/*" }}
+        onChange={(e) => setUserPhoto(e.target.files[0])}
+      />
+
+      <SubmitBtn text={isEditUser ? "update" : "Create a new user"} />
     </form>
   );
 }
