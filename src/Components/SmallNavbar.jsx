@@ -4,6 +4,7 @@ import { FaUsers } from "react-icons/fa";
 import { MdOutlinePedalBike } from "react-icons/md";
 import { PiBatteryPlusBold } from "react-icons/pi";
 import { PiSwapBold } from "react-icons/pi";
+import { FaWallet } from "react-icons/fa6";
 
 const links = [
   {
@@ -29,6 +30,12 @@ const links = [
     label: "swaps",
     path: "dashboard/swaps",
     icon: <PiSwapBold />,
+  },
+  {
+    id: 4,
+    label: "payments",
+    path: "dashboard/payments",
+    icon: <FaWallet />,
   },
 ];
 

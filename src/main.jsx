@@ -27,6 +27,7 @@ import RootLayout from "./RootLayout.jsx";
 import Profile from "./Pages/Profile.jsx";
 import AdminRoute from "./AdminRoute.jsx";
 import { Toaster } from "react-hot-toast";
+import Payments from "./Pages/Payments.jsx";
 
 // router
 const router = createBrowserRouter(
@@ -48,6 +49,7 @@ const router = createBrowserRouter(
             <Route path="dashboard/bikes" element={<Bikes />} />
             <Route path="dashboard/batteries" element={<Batteries />} />
             <Route path="dashboard/swaps" element={<Swaps />} />
+            <Route path="dashboard/payments" element={<Payments />} />
           </Route>
         </Route>
       </Route>
