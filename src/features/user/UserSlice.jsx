@@ -1,13 +1,17 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite.js";
-import { Permission, Query, Role } from "appwrite";
+import { ID, Permission, Query, Role } from "appwrite";
 import { updateBike } from "../bike/bikeSlice.js";
 import { updateBattery } from "../battery/batterySlice.js";
 import toast from "react-hot-toast";
+import { data } from "react-router";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
+const paymentRecordsCollId = import.meta.env.VITE_PAYMENT_RECORDS_COLL_ID;
+const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
+const companyCollId = import.meta.env.VITE_COMPANY_COLL_ID;
 
 const initialState = {
   isUserLoading: false,
@@ -193,10 +197,13 @@ export const assignBikeToUser = createAsyncThunk(
       paidAmount,
       depositAmount,
       chargerStatus,
+      depositMethod, // New: Payment method for deposit
+      paidMethod, // New: Payment method for paid amount
     },
     thunkAPI
   ) => {
     try {
+      // Update Users collection (remove pendingAmount and paidAmount)
       const response = await databases.updateDocument(
         dbId,
         usersCollId,
@@ -206,13 +213,62 @@ export const assignBikeToUser = createAsyncThunk(
           bikeId: selectedBikeId,
           batteryId: selectedBatteryId,
           totalSwapCount: 0,
-          pendingAmount: Number(pendingAmount),
           depositAmount: Number(depositAmount),
-          paidAmount: Number(paidAmount),
           chargerStatus,
         }
       );
+
+      // Create paymentRecords entries
       if (response) {
+        // Deposit payment
+        if (depositAmount > 0) {
+          await databases.createDocument(
+            dbId,
+            paymentRecordsCollId,
+            ID.unique(),
+            {
+              userId,
+              amount: Number(depositAmount),
+              type: "deposit",
+              method: depositMethod || "cash",
+              date: new Date().toISOString(),
+            }
+          );
+        }
+
+        // Initial paid rent
+        if (paidAmount > 0) {
+          await databases.createDocument(
+            dbId,
+            paymentRecordsCollId,
+            ID.unique(),
+            {
+              userId,
+              amount: Number(paidAmount),
+              type: "rent",
+              method: paidMethod || "cash", // Default to "cash" if not provided
+              date: new Date().toISOString(),
+            }
+          );
+        }
+
+        // Initial pending rent
+        if (pendingAmount > 0) {
+          await databases.createDocument(
+            dbId,
+            paymentRecordsCollId,
+            ID.unique(),
+            {
+              userId,
+              amount: Number(pendingAmount),
+              type: "pending",
+              method: "",
+              date: new Date().toISOString(),
+            }
+          );
+        }
+
+        // Update Bikes and Batteries collections
         await thunkAPI
           .dispatch(
             updateBike({ bikeId: selectedBikeId, userId, bikeStatus: true })
@@ -227,6 +283,104 @@ export const assignBikeToUser = createAsyncThunk(
           })
         );
       }
+
+      return response;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+export const createWeeklyPayments = createAsyncThunk(
+  "user/createWeeklyPayments",
+  async (_, thunkAPI) => {
+    try {
+      const WEEKLY_RENT_AMOUNT = 500; // Fixed weekly rent (adjust as needed)
+      const currentDay = new Date().getDay(); // Sunday=0, Monday=1, etc.
+      const todayStart =
+        new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
+
+      // Step 1: Get companies with matching salary day
+      const companies = await databases.listDocuments(dbId, companyCollId, [
+        Query.equal("salaryDay", currentDay),
+      ]);
+
+      if (companies.documents.length === 0) {
+        return { created: 0 }; // No companies with this salary day
+      }
+
+      const companyNames = companies.documents.map((c) => c.companyName);
+
+      // Step 2: Get active users for these companies
+      const users = await databases.listDocuments(dbId, usersCollId, [
+        Query.equal("userStatus", true),
+        Query.equal("userCompany", companyNames),
+      ]);
+
+      if (users.documents.length === 0) {
+        return { created: 0 }; // No active users
+      }
+
+      let createdPayments = 0;
+
+      // Step 3: For each user, create payment if bike is assigned and no duplicate exists
+      for (const user of users.documents) {
+        const bikeId = user.bikeId;
+        if (!bikeId) continue;
+
+        // Confirm bike assignment
+        const bike = await databases.getDocument(dbId, bikesCollId, bikeId);
+        if (bike.bikeStatus && bike.currOwner === user.$id) {
+          // Check for existing payment today
+          const existingPayments = await databases.listDocuments(
+            dbId,
+            paymentRecordsCollId,
+            [
+              Query.equal("userId", user.$id),
+              Query.equal("type", "rent"),
+              Query.equal("method", "pending"),
+              Query.greaterThanEqual("date", todayStart),
+            ]
+          );
+
+          if (existingPayments.documents.length === 0) {
+            // Create new payment
+            await databases.createDocument(
+              dbId,
+              paymentRecordsCollId,
+              ID.unique(),
+              {
+                userId: user.$id,
+                amount: WEEKLY_RENT_AMOUNT,
+                type: "rent",
+                method: "pending",
+                date: new Date().toISOString(),
+              }
+            );
+            createdPayments++;
+          }
+        }
+      }
+
+      return { created: createdPayments };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error);
+    }
+  }
+);
+
+export const updatePaymentStatus = createAsyncThunk(
+  "user/updatePaymentStatus",
+  async ({ paymentId, paymentMethod }, thunkAPI) => {
+    try {
+      const response = await databases.updateDocument(
+        dbId,
+        paymentRecordsCollId,
+        paymentId,
+        {
+          method: paymentMethod, // "cash" or "online"
+        }
+      );
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -541,6 +695,28 @@ const userSlice = createSlice({
         state.isUserLoading = false;
         toast.error("Error in user/toggleUserBlock");
         state.errMsg = payload?.message || "Error in user/toggleUserBlock";
+      })
+      .addCase(createWeeklyPayments.fulfilled, (state, { payload }) => {
+        state.isUserLoading = false;
+        toast.success(`Created ${payload.created} weekly payment records`);
+      })
+      .addCase(createWeeklyPayments.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        toast.error(payload.message || "Failed to create weekly payments");
+        state.errMsg = payload.message || "Failed to create weekly payments";
+      })
+      .addCase(updatePaymentStatus.pending, (state) => {
+        state.isUserLoading = true;
+        state.errMsg = null;
+      })
+      .addCase(updatePaymentStatus.fulfilled, (state) => {
+        state.isUserLoading = false;
+        toast.success("Payment status updated successfully!");
+      })
+      .addCase(updatePaymentStatus.rejected, (state, { payload }) => {
+        state.isUserLoading = false;
+        toast.error(payload.message || "Failed to update payment status");
+        state.errMsg = payload.message || "Failed to update payment status";
       });
   },
 });

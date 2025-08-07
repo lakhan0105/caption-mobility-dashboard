@@ -9,9 +9,6 @@ function Tabs({ userDetails, handleReturnBike }) {
     bikeId: userBikeId,
     batteryId: userBatteryId,
     userStatus,
-    pendingAmount,
-    paidAmount,
-    depositAmount,
     chargerStatus,
   } = userDetails;
 
@@ -38,10 +35,7 @@ function Tabs({ userDetails, handleReturnBike }) {
   return (
     <section>
       {/* TAB HEADINGS */}
-      <div
-        className="h-[50px] flex text-sm pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37]
- px-5 text-white mb-2"
-      >
+      <div className="h-[50px] flex text-sm pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37]  px-5 text-white mb-2">
         {tabHeadingsData.map((heading) => {
           const { id, name, label } = heading;
           return (
@@ -72,11 +66,7 @@ function Tabs({ userDetails, handleReturnBike }) {
 
       {/* USER PAYMENT DETAILS TAB */}
       {activeTab === "user-pending-payment" && (
-        <UserPaymentDetails
-          paidAmount={paidAmount}
-          depositAmount={depositAmount}
-          pendingAmount={pendingAmount}
-        />
+        <UserPaymentDetails userId={userId} />
       )}
 
       {/* USER FULL DETAILS */}

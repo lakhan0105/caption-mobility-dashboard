@@ -27,6 +27,9 @@ function Sidebar() {
         <li>
           <NavLink to={"dashboard/swaps"}>Swaps</NavLink>
         </li>
+        <li>
+          <NavLink to={"dashboard/payments"}>payments</NavLink>
+        </li>
       </ul>
     </aside>
   );
