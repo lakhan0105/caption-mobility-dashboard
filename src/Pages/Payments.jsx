@@ -104,7 +104,7 @@ const Payments = () => {
         return;
       }
 
-      // Get user IDs from the company
+      // Get user IDs from the company   
       const companyUserIds = usersResponse.documents.map((user) => user.$id);
       console.log("User IDs:", companyUserIds);
 
@@ -264,11 +264,11 @@ const Payments = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 bg-white">
       <div className="mb-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
               Pending Payments Collection
             </h1>
             <p className="text-gray-600">
@@ -277,7 +277,7 @@ const Payments = () => {
           </div>
           <button
             onClick={refreshData}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 w-full sm:w-auto"
           >
             Refresh Data
           </button>
@@ -307,7 +307,7 @@ const Payments = () => {
         <>
           {/* Summary */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
                   Pending Payments Collection
@@ -316,7 +316,7 @@ const Payments = () => {
                   {payments.length} pending payment(s) found
                 </p>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <p className="text-2xl font-bold text-green-600">
                   ₹{totalAmount.toLocaleString("en-IN")}
                 </p>
@@ -337,87 +337,154 @@ const Payments = () => {
               </p>
             </div>
           ) : (
-            /* Payments Table */
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Phone
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Method
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {payments.map((payment) => (
-                    <tr key={payment.$id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {payment.userName || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {payment.userPhone || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{payment.amount.toLocaleString("en-IN")}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeColor(
-                            payment.type
-                          )}`}
-                        >
-                          {payment.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMethodBadge(
-                            payment.method
-                          )}`}
-                        >
-                          {payment.method}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            /* Responsive Payments Display */
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block bg-white shadow rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Phone
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Amount
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Type
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Method
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {payments.map((payment) => (
+                        <tr key={payment.$id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {payment.userName || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {payment.userPhone || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ₹{payment.amount.toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeColor(
+                                payment.type
+                              )}`}
+                            >
+                              {payment.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMethodBadge(
+                                payment.method
+                              )}`}
+                            >
+                              {payment.method}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDate(payment.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <button
+                              onClick={() => collectPayment(payment)}
+                              disabled={collectingPayment === payment.$id}
+                              className={`px-3 py-1 rounded-md text-sm font-medium ${
+                                collectingPayment === payment.$id
+                                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                              }`}
+                            >
+                              {collectingPayment === payment.$id
+                                ? "Collecting..."
+                                : "Collect"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {payments.map((payment) => (
+                  <div
+                    key={payment.$id}
+                    className="bg-white shadow rounded-lg p-4 border border-gray-200"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">
+                          {payment.userName || "N/A"}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {payment.userPhone || "N/A"}
+                        </p>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="text-lg font-bold text-gray-900">
+                          ₹{payment.amount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeColor(
+                          payment.type
+                        )}`}
+                      >
+                        {payment.type}
+                      </span>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMethodBadge(
+                          payment.method
+                        )}`}
+                      >
+                        {payment.method}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs text-gray-500">
                         {formatDate(payment.date)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button
-                          onClick={() => collectPayment(payment)}
-                          disabled={collectingPayment === payment.$id}
-                          className={`px-3 py-1 rounded-md text-sm font-medium ${
-                            collectingPayment === payment.$id
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                          }`}
-                        >
-                          {collectingPayment === payment.$id
-                            ? "Collecting..."
-                            : "Collect"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </p>
+                      <button
+                        onClick={() => collectPayment(payment)}
+                        disabled={collectingPayment === payment.$id}
+                        className={`px-4 py-2 rounded-md text-sm font-medium ${
+                          collectingPayment === payment.$id
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        }`}
+                      >
+                        {collectingPayment === payment.$id
+                          ? "Collecting..."
+                          : "Collect"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
