@@ -131,11 +131,6 @@ function UsersTable({ data, lastUserElementRef }) {
                         ) : (
                           <p className="text-[10px]"></p>
                         )}
-                        {pendingAmount > 0 && (
-                          <p className="text-[10px] font-medium text-red-700">
-                            pending: ₹{pendingAmount}
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
