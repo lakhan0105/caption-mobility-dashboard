@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react"; // Add useRef
 import { useParams } from "react-router";
-
 import { FaPhoneAlt } from "react-icons/fa";
 import { FaRegMessage } from "react-icons/fa6";
 import { databases, storage } from "../appwrite";
@@ -12,8 +11,8 @@ import Tabs from "../Components/Tabs/Tabs";
 import { Avatar } from "@mui/material";
 import { deepPurple } from "@mui/material/colors";
 import UserPhoto from "../Components/UserPhoto";
-const userBucketId = import.meta.env.VITE_USER_BUCKET_ID;
 
+const userBucketId = import.meta.env.VITE_USER_BUCKET_ID;
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 
@@ -21,6 +20,7 @@ function UserDetails() {
   const param = useParams();
   const paramId = param.id;
   const [userDetails, setUserDetails] = useState();
+  const paymentDetailsRef = useRef(null); // Create ref for UserPaymentDetails
 
   const dispatch = useDispatch();
 
@@ -30,7 +30,6 @@ function UserDetails() {
     }
   );
 
-  // function to fetch the user (single user)
   async function getUser() {
     try {
       const response = await databases.getDocument(dbId, usersCollId, paramId);
@@ -39,7 +38,7 @@ function UserDetails() {
       }
       console.log(response);
     } catch (error) {
-      alert("error while geting the user details");
+      alert("error while getting the user details");
       console.log(error);
     }
   }
@@ -48,12 +47,7 @@ function UserDetails() {
     getUser();
   }, [paramId]);
 
-  // function to return the bike
-  // - removes the bikeId, userSatatus from the userData in appwrite
-  // - changes bikeStatus to null from bikeData in appwrite
   function handleReturnBike() {
-    // run the returnBikeFrmUser
-    // - if successfull run the getUser() to refresh the data again
     dispatch(
       returnBikeFromUser({
         userId: userDetails?.$id,
@@ -83,24 +77,15 @@ function UserDetails() {
     return (
       <section className="w-full max-w-[900px] md:ml-[300px] md:w-[calc(100%-300px)]">
         <div className="">
-          {/* TOP CARD */}
-          <div
-            className="flex items-cente gap-8 pt-14 pb-10 bg-gradient-to-r from-[#39434d] to-[#252c37]
- px-5 text-white"
-          >
-            {/* PROFILE ICON */}
+          <div className="flex items-center gap-8 pt-14 pb-10 bg-gradient-to-r from-[#39434d] to-[#252c37] px-5 text-white">
             <UserPhoto fileId={userPhotoId} />
-
-            {/* BASIC INFO */}
             <div className="mt-0">
               <h2 className="text-2xl font-semibold">{userName}</h2>
-              <p className="text-xs font-medium tex-zinc-500 mt-1.5">
+              <p className="text-xs font-medium text-zinc-500 mt-1.5">
                 {userRegisterId}
               </p>
-
-              {/* BUTTONS TO CALL AND MESSAGE THE USER */}
               <div className="mt-2.5">
-                <div className=" flex items-center gap-3">
+                <div className="flex items-center gap-3">
                   <SimpleBtn
                     name={"call"}
                     icon={<FaPhoneAlt />}
@@ -110,9 +95,8 @@ function UserDetails() {
                     userPhone={userDetails?.userPhone}
                     action={"call"}
                   />
-
                   <SimpleBtn
-                    name={"messsage"}
+                    name={"message"}
                     icon={<FaRegMessage />}
                     extraStyles={
                       "capitalize text-xs border-white/30 rounded-2xl"
@@ -125,10 +109,12 @@ function UserDetails() {
             </div>
           </div>
 
-          {/* TABS */}
-          <Tabs userDetails={userDetails} handleReturnBike={handleReturnBike} />
+          <Tabs
+            userDetails={userDetails}
+            handleReturnBike={handleReturnBike}
+            paymentDetailsRef={paymentDetailsRef} // Pass the ref to Tabs
+          />
 
-          {/* If bike is not assigned then show AssignForm or else show the swap form */}
           <Modal>
             {isAssignForm && (
               <AssignForm
@@ -136,11 +122,9 @@ function UserDetails() {
                 oldPendingAmount={userDetails?.pendingAmount}
               />
             )}
-
             {isSwapForm && (
               <SwapForm userDetails={userDetails} getUser={getUser} />
             )}
-
             {isPendingPayment && (
               <EditPaymentForm
                 userId={paramId}
@@ -148,9 +132,11 @@ function UserDetails() {
                 paidAmount={userDetails?.paidAmount}
                 pendingAmount={userDetails?.pendingAmount}
                 getUser={getUser}
+                onPaymentUpdated={() =>
+                  paymentDetailsRef.current?.refreshPayments()
+                } // Pass the refresh function
               />
             )}
-
             {isLoading && <h2 className="text-white">Loading...</h2>}
           </Modal>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { databases } from "../appwrite"; // Adjust import path as needed
+import { databases } from "../appwrite";
 import { Query } from "appwrite";
 
 const Payments = () => {
@@ -16,13 +16,11 @@ const Payments = () => {
   const [collectingPayment, setCollectingPayment] = useState(null);
 
   useEffect(() => {
-    // Check localStorage for cached companies
     const cachedCompanies = localStorage.getItem("companies_cache");
     const cacheTime = localStorage.getItem("companies_cache_time");
 
     if (cachedCompanies && cacheTime) {
       const timeDiff = Date.now() - parseInt(cacheTime);
-      // Use cache if less than 5 minutes old
       if (timeDiff < 5 * 60 * 1000) {
         setCompanies(JSON.parse(cachedCompanies));
         return;
@@ -33,7 +31,6 @@ const Payments = () => {
 
   useEffect(() => {
     if (selectedCompany) {
-      // Check localStorage for cached payments
       const cachedPayments = localStorage.getItem(
         `payments_${selectedCompany}`
       );
@@ -43,7 +40,6 @@ const Payments = () => {
 
       if (cachedPayments && cacheTime) {
         const timeDiff = Date.now() - parseInt(cacheTime);
-        // Use cache if less than 2 minutes old
         if (timeDiff < 2 * 60 * 1000) {
           const parsedPayments = JSON.parse(cachedPayments);
           setPayments(parsedPayments);
@@ -63,8 +59,6 @@ const Payments = () => {
     try {
       const response = await databases.listDocuments(dbId, companyCollId);
       setCompanies(response.documents);
-
-      // Cache companies data
       localStorage.setItem(
         "companies_cache",
         JSON.stringify(response.documents)
@@ -78,7 +72,6 @@ const Payments = () => {
   const fetchTodaysPayments = async () => {
     setLoading(true);
     try {
-      // Get selected company details
       const selectedCompanyData = companies.find(
         (c) => c.$id === selectedCompany
       );
@@ -90,7 +83,6 @@ const Payments = () => {
 
       console.log("Selected company:", selectedCompanyData.companyName);
 
-      // Get all users from the selected company
       const usersResponse = await databases.listDocuments(dbId, usersCollId, [
         Query.equal("userCompany", selectedCompanyData.companyName),
       ]);
@@ -104,11 +96,9 @@ const Payments = () => {
         return;
       }
 
-      // Get user IDs from the company   
       const companyUserIds = usersResponse.documents.map((user) => user.$id);
       console.log("User IDs:", companyUserIds);
 
-      // Get all pending payment records for these users
       const paymentsResponse = await databases.listDocuments(
         dbId,
         paymentRecordsCollId,
@@ -117,16 +107,13 @@ const Payments = () => {
 
       console.log("All pending payments:", paymentsResponse.documents.length);
 
-      // Filter payments for users of selected company
       const userPayments = [];
       const userMap = {};
 
-      // Create user map for easy lookup
       usersResponse.documents.forEach((user) => {
         userMap[user.$id] = user;
       });
 
-      // Process payments - filter by company users
       paymentsResponse.documents.forEach((payment) => {
         if (companyUserIds.includes(payment.userId)) {
           const user = userMap[payment.userId];
@@ -150,7 +137,6 @@ const Payments = () => {
       );
       setTotalAmount(total);
 
-      // Cache payments data
       localStorage.setItem(
         `payments_${selectedCompany}`,
         JSON.stringify(userPayments)
@@ -171,7 +157,7 @@ const Payments = () => {
     try {
       // Update the payment record to mark as collected
       await databases.updateDocument(dbId, paymentRecordsCollId, payment.$id, {
-        type: "collected", // Change from 'pending' to 'collected'
+        type: "collected",
       });
 
       // Update user's pending amount (subtract the collected amount)
@@ -183,11 +169,9 @@ const Payments = () => {
       const currentPending = parseInt(user.pendingAmount || "0");
       const newPending = Math.max(0, currentPending - payment.amount);
 
-      if (user.pendingAmount) {
-        await databases.updateDocument(dbId, usersCollId, payment.userId, {
-          pendingAmount: newPending.toString(),
-        });
-      }
+      await databases.updateDocument(dbId, usersCollId, payment.userId, {
+        pendingAmount: newPending, // Send as integer
+      });
 
       // Remove the collected payment from the list
       const updatedPayments = payments.filter((p) => p.$id !== payment.$id);
@@ -219,10 +203,8 @@ const Payments = () => {
   };
 
   const refreshData = () => {
-    // Clear localStorage cache
     localStorage.removeItem("companies_cache");
     localStorage.removeItem("companies_cache_time");
-    // Clear all payment caches
     Object.keys(localStorage).forEach((key) => {
       if (key.startsWith("payments_")) {
         localStorage.removeItem(key);
@@ -284,7 +266,6 @@ const Payments = () => {
         </div>
       </div>
 
-      {/* Company Selection */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Company
@@ -305,7 +286,6 @@ const Payments = () => {
 
       {selectedCompany && (
         <>
-          {/* Summary */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
@@ -337,9 +317,7 @@ const Payments = () => {
               </p>
             </div>
           ) : (
-            /* Responsive Payments Display */
             <>
-              {/* Desktop Table View */}
               <div className="hidden lg:block bg-white shadow rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -423,7 +401,6 @@ const Payments = () => {
                 </div>
               </div>
 
-              {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
                 {payments.map((payment) => (
                   <div
@@ -445,7 +422,6 @@ const Payments = () => {
                         </p>
                       </div>
                     </div>
-                    
                     <div className="flex flex-wrap gap-2 mb-3">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeColor(
@@ -462,7 +438,6 @@ const Payments = () => {
                         {payment.method}
                       </span>
                     </div>
-                    
                     <div className="flex justify-between items-center">
                       <p className="text-xs text-gray-500">
                         {formatDate(payment.date)}
