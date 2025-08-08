@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import UserFullDetails from "./UserFullDetails";
 import UserRentalDetails from "./UserRentalDetails";
 import UserPaymentDetails from "./UserPaymentDetails";
 
-function Tabs({ userDetails, handleReturnBike }) {
+function Tabs({ userDetails, handleReturnBike, paymentDetailsRef }) {
+  // Add paymentDetailsRef prop
   const {
     $id: userId,
     bikeId: userBikeId,
@@ -12,19 +13,14 @@ function Tabs({ userDetails, handleReturnBike }) {
     chargerStatus,
   } = userDetails;
 
-  console.log("userDetails", userDetails);
-
-  // tab Headings Data
   const tabHeadingsData = [
     { id: 1, name: "user-rental", label: "rental" },
     { id: 2, name: "user-pending-payment", label: "payment" },
     { id: 3, name: "user-full-details", label: "full details" },
   ];
 
-  // state to keep track of active tab
   const [activeTab, setActiveTab] = useState(tabHeadingsData[0].name);
 
-  // handleActiveTab
   function handleActiveTab(e) {
     const name = e.target.name;
     setActiveTab(name);
@@ -34,8 +30,7 @@ function Tabs({ userDetails, handleReturnBike }) {
 
   return (
     <section>
-      {/* TAB HEADINGS */}
-      <div className="h-[50px] flex text-sm pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37]  px-5 text-white mb-2">
+      <div className="h-[50px] flex text-sm pt-2 bg-gradient-to-r from-[#39434d] to-[#252c37] px-5 text-white mb-2">
         {tabHeadingsData.map((heading) => {
           const { id, name, label } = heading;
           return (
@@ -53,7 +48,6 @@ function Tabs({ userDetails, handleReturnBike }) {
         })}
       </div>
 
-      {/* USER RENTAL TAB */}
       {activeTab === "user-rental" && (
         <UserRentalDetails
           userId={userId}
@@ -64,12 +58,10 @@ function Tabs({ userDetails, handleReturnBike }) {
         />
       )}
 
-      {/* USER PAYMENT DETAILS TAB */}
       {activeTab === "user-pending-payment" && (
-        <UserPaymentDetails userId={userId} />
+        <UserPaymentDetails userId={userId} ref={paymentDetailsRef} />
       )}
 
-      {/* USER FULL DETAILS */}
       {activeTab === "user-full-details" && (
         <UserFullDetails userFullDetailsState={userFullDetailsState} />
       )}

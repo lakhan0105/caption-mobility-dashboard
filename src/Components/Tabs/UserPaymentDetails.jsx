@@ -1,18 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import InfoCardOne from "../InfoCardOne";
 import { MdOutlinePayment } from "react-icons/md";
 import { FaRegEdit } from "react-icons/fa";
 import { useDispatch } from "react-redux";
-import { databases } from "../../appwrite"; // Adjust import path as needed
+import { databases } from "../../appwrite";
 import { Query } from "appwrite";
-
 import {
   showEditPaymentModal,
   showModal,
 } from "../../features/modal/modalSlice";
 import InfoCardRow from "../InfoCardRow";
 
-function UserPaymentDetails({ userId }) {
+const UserPaymentDetails = forwardRef(({ userId }, ref) => {
   const dispatch = useDispatch();
   const [paymentData, setPaymentData] = useState({
     depositAmount: 0,
@@ -37,7 +36,6 @@ function UserPaymentDetails({ userId }) {
       console.log("Fetching payments for userId:", userId);
       console.log("Using collection:", paymentRecordsCollId);
 
-      // Get all payment records for this user
       const response = await databases.listDocuments(
         dbId,
         paymentRecordsCollId,
@@ -46,7 +44,6 @@ function UserPaymentDetails({ userId }) {
 
       console.log("Payment records found:", response.documents);
 
-      // Calculate amounts based on payment types
       let depositAmount = 0;
       let paidAmount = 0;
       let pendingAmount = 0;
@@ -60,6 +57,7 @@ function UserPaymentDetails({ userId }) {
             depositAmount += amount;
             break;
           case "rent":
+          case "collected":
             paidAmount += amount;
             break;
           case "pending":
@@ -95,7 +93,11 @@ function UserPaymentDetails({ userId }) {
     }
   };
 
-  // show the modal to edit the payment details
+  // Expose fetchUserPayments to parent components
+  useImperativeHandle(ref, () => ({
+    refreshPayments: fetchUserPayments,
+  }));
+
   function showEditModal() {
     dispatch(showModal());
     dispatch(showEditPaymentModal());
@@ -121,37 +123,32 @@ function UserPaymentDetails({ userId }) {
   }
 
   return (
-    <>
-      <InfoCardOne
-        headingIcon={<MdOutlinePayment />}
-        heading={"payment details"}
-        cardBtnName={"edit"}
-        cardBtnIcon={<FaRegEdit />}
-        cardExtraStyles={
-          "border-[1.45px] border-red-400/50 font-semibold text-red-500 text-xs capitalize"
-        }
-        handleCardBtn={showEditModal}
-      >
-        {/* Render deposit amount */}
-        <InfoCardRow
-          heading={"deposit amount"}
-          value={`₹ ${paymentData.depositAmount.toLocaleString("en-IN")}`}
-        />
-
-        {/* Render paid amount */}
-        <InfoCardRow
-          heading={"paid amount"}
-          value={`₹ ${paymentData.paidAmount.toLocaleString("en-IN")}`}
-        />
-
-        {/* Render PENDING AMOUNT */}
-        <InfoCardRow
-          heading={"pending amount"}
-          value={`₹ ${paymentData.pendingAmount.toLocaleString("en-IN")}`}
-        />
-      </InfoCardOne>
-    </>
+    <InfoCardOne
+      headingIcon={<werkte:MdOutlinePayment />}
+      heading={"payment details"}
+      cardBtnName={"edit"}
+      card配件:cardBtnIcon={<FaRegEdit />}
+      cardExtraStyles={
+        "border-[1.45px] border-red-400/50 font-semibold text-red-500 text-xs capitalize"
+      }
+      handleCardBtn={showEditModal}
+    >
+      <InfoCardRow
+        heading={"deposit amount"}
+        value={`₹ ${paymentData.depositAmount.toLocaleString("en-IN")}`}
+      />
+      <InfoCardRow
+        heading={"paid amount"}
+        value={`₹ ${paymentData.paidAmount.toLocaleString("en-IN")}`}
+      />
+      <InfoCardRow
+        heading={"pending amount"}
+        value={`₹ ${paymentData.pendingAmount.toLocaleString("en-IN")}`}
+      />
+    </InfoCardOne>
   );
-}
+});
+
+UserPaymentDetails.displayName = "UserPaymentDetails";
 
 export default UserPaymentDetails;
