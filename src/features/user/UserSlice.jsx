@@ -4,12 +4,10 @@ import { ID, Permission, Query, Role } from "appwrite";
 import { updateBike } from "../bike/bikeSlice.js";
 import { updateBattery } from "../battery/batterySlice.js";
 import toast from "react-hot-toast";
-import { data } from "react-router";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
-const paymentRecordsCollId = import.meta.env.VITE_PAYMENT_RECORDS_COLL_ID;
 const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
 const companyCollId = import.meta.env.VITE_COMPANY_COLL_ID;
 
@@ -24,8 +22,6 @@ const initialState = {
   selectedUser: null,
   activeFilter: null,
 };
-
-let limit = 20;
 
 export const createUser = createAsyncThunk(
   "user/createUser",
@@ -53,9 +49,15 @@ export const createUser = createAsyncThunk(
           userName,
           userRegisterId,
           userPhone,
-          userCompany,
+          userCompany: userCompany
+            ? userCompany.trim().toLowerCase()
+            : userCompany,
           userLocation,
           userPhotoId,
+          userStatus: false,
+          depositAmount: 0,
+          paidAmount: 0,
+          pendingAmount: 0,
         },
         permissions
       );
@@ -82,7 +84,9 @@ export const editUser = createAsyncThunk(
         userName,
         userRegisterId,
         userPhone,
-        userCompany,
+        userCompany: userCompany
+          ? userCompany.trim().toLowerCase()
+          : userCompany,
         userLocation,
       });
       return resp;
@@ -114,7 +118,7 @@ export const getUserProfile = createAsyncThunk(
       const response = await databases.getDocument(dbId, usersCollId, id);
       return response;
     } catch (error) {
-      return thunkAPI.rejectWithValue("Error in user/getUserProfile", error);
+      return thunkAPI.rejectWithValue(error);
     }
   }
 );
@@ -171,14 +175,14 @@ export const getUserByFilter = createAsyncThunk(
       ];
     } else if (attributeName === "userCompany") {
       query = [
-        Query.startsWith("userCompany", attributeValue),
+        Query.contains("userCompany", attributeValue),
         Query.limit(limit),
         Query.offset(offset),
       ];
     }
     try {
       const resp = await databases.listDocuments(dbId, usersCollId, query);
-      console.log(resp);
+      console.log("Filtered users:", resp);
       return resp;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -197,13 +201,14 @@ export const assignBikeToUser = createAsyncThunk(
       paidAmount,
       depositAmount,
       chargerStatus,
-      depositMethod, // New: Payment method for deposit
-      paidMethod, // New: Payment method for paid amount
     },
     thunkAPI
   ) => {
     try {
-      // Update Users collection (remove pendingAmount and paidAmount)
+      const currentPending =
+        (await databases.getDocument(dbId, usersCollId, userId))
+          .pendingAmount || 0;
+      const newPending = currentPending + Number(pendingAmount);
       const response = await databases.updateDocument(
         dbId,
         usersCollId,
@@ -214,61 +219,13 @@ export const assignBikeToUser = createAsyncThunk(
           batteryId: selectedBatteryId,
           totalSwapCount: 0,
           depositAmount: Number(depositAmount),
+          paidAmount: Number(paidAmount),
+          pendingAmount: newPending,
           chargerStatus,
         }
       );
 
-      // Create paymentRecords entries
       if (response) {
-        // Deposit payment
-        if (depositAmount > 0) {
-          await databases.createDocument(
-            dbId,
-            paymentRecordsCollId,
-            ID.unique(),
-            {
-              userId,
-              amount: Number(depositAmount),
-              type: "deposit",
-              method: depositMethod || "cash",
-              date: new Date().toISOString(),
-            }
-          );
-        }
-
-        // Initial paid rent
-        if (paidAmount > 0) {
-          await databases.createDocument(
-            dbId,
-            paymentRecordsCollId,
-            ID.unique(),
-            {
-              userId,
-              amount: Number(paidAmount),
-              type: "rent",
-              method: paidMethod || "cash", // Default to "cash" if not provided
-              date: new Date().toISOString(),
-            }
-          );
-        }
-
-        // Initial pending rent
-        if (pendingAmount > 0) {
-          await databases.createDocument(
-            dbId,
-            paymentRecordsCollId,
-            ID.unique(),
-            {
-              userId,
-              amount: Number(pendingAmount),
-              type: "pending",
-              method: "",
-              date: new Date().toISOString(),
-            }
-          );
-        }
-
-        // Update Bikes and Batteries collections
         await thunkAPI
           .dispatch(
             updateBike({ bikeId: selectedBikeId, userId, bikeStatus: true })
@@ -284,103 +241,6 @@ export const assignBikeToUser = createAsyncThunk(
         );
       }
 
-      return response;
-    } catch (error) {
-      return thunkAPI.rejectWithValue(error);
-    }
-  }
-);
-
-export const createWeeklyPayments = createAsyncThunk(
-  "user/createWeeklyPayments",
-  async (_, thunkAPI) => {
-    try {
-      const WEEKLY_RENT_AMOUNT = 500; // Fixed weekly rent (adjust as needed)
-      const currentDay = new Date().getDay(); // Sunday=0, Monday=1, etc.
-      const todayStart =
-        new Date().toISOString().split("T")[0] + "T00:00:00.000Z";
-
-      // Step 1: Get companies with matching salary day
-      const companies = await databases.listDocuments(dbId, companyCollId, [
-        Query.equal("salaryDay", currentDay),
-      ]);
-
-      if (companies.documents.length === 0) {
-        return { created: 0 }; // No companies with this salary day
-      }
-
-      const companyNames = companies.documents.map((c) => c.companyName);
-
-      // Step 2: Get active users for these companies
-      const users = await databases.listDocuments(dbId, usersCollId, [
-        Query.equal("userStatus", true),
-        Query.equal("userCompany", companyNames),
-      ]);
-
-      if (users.documents.length === 0) {
-        return { created: 0 }; // No active users
-      }
-
-      let createdPayments = 0;
-
-      // Step 3: For each user, create payment if bike is assigned and no duplicate exists
-      for (const user of users.documents) {
-        const bikeId = user.bikeId;
-        if (!bikeId) continue;
-
-        // Confirm bike assignment
-        const bike = await databases.getDocument(dbId, bikesCollId, bikeId);
-        if (bike.bikeStatus && bike.currOwner === user.$id) {
-          // Check for existing payment today
-          const existingPayments = await databases.listDocuments(
-            dbId,
-            paymentRecordsCollId,
-            [
-              Query.equal("userId", user.$id),
-              Query.equal("type", "rent"),
-              Query.equal("method", "pending"),
-              Query.greaterThanEqual("date", todayStart),
-            ]
-          );
-
-          if (existingPayments.documents.length === 0) {
-            // Create new payment
-            await databases.createDocument(
-              dbId,
-              paymentRecordsCollId,
-              ID.unique(),
-              {
-                userId: user.$id,
-                amount: WEEKLY_RENT_AMOUNT,
-                type: "rent",
-                method: "pending",
-                date: new Date().toISOString(),
-              }
-            );
-            createdPayments++;
-          }
-        }
-      }
-
-      return { created: createdPayments };
-    } catch (error) {
-      return thunkAPI.rejectWithValue(error);
-    }
-  }
-);
-
-export const updatePaymentStatus = createAsyncThunk(
-  "user/updatePaymentStatus",
-  async ({ paymentId, paymentMethod }, thunkAPI) => {
-    try {
-      const response = await databases.updateDocument(
-        dbId,
-        paymentRecordsCollId,
-        paymentId,
-        {
-          method: paymentMethod, // "cash" or "online"
-        }
-      );
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -436,7 +296,14 @@ export const returnBikeFromUser = createAsyncThunk(
       );
       if (response) {
         await thunkAPI
-          .dispatch(updateBike({ bikeId, userId: null, bikeStatus: false }))
+          .dispatch(
+            updateBike({
+              bikeId,
+              userId: null,
+              bikeStatus: false,
+              returnedAt: new Date().toISOString(),
+            })
+          )
           .unwrap();
         await thunkAPI.dispatch(
           updateBattery({
@@ -444,7 +311,7 @@ export const returnBikeFromUser = createAsyncThunk(
             userId: null,
             batStatus: false,
             assignedAt: null,
-            returnedAt: new Date(),
+            returnedAt: new Date().toISOString(),
           })
         );
       }
@@ -457,10 +324,10 @@ export const returnBikeFromUser = createAsyncThunk(
 
 export const updatePayment = createAsyncThunk(
   "user/updatePayment",
-  async ({ userId, data }, thunkAPI) => {
+  async ({ userId, pendingAmount }, thunkAPI) => {
     try {
       const resp = await databases.updateDocument(dbId, usersCollId, userId, {
-        ...data,
+        pendingAmount: Number(pendingAmount),
       });
       return resp;
     } catch (error) {
@@ -506,7 +373,7 @@ const userSlice = createSlice({
       })
       .addCase(getUserProfile.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        state.errMsg = payload || "User profile not found";
+        state.errMsg = payload?.message || "User profile not found";
       })
       .addCase(getUsersList.pending, (state) => {
         state.isUserLoading = true;
@@ -544,7 +411,7 @@ const userSlice = createSlice({
         if (payload.code === 409) {
           toast.error("User with same name/registerId already present!");
         }
-        state.errMsg = payload.response?.message || "Could not create a user";
+        state.errMsg = payload?.message || "Could not create a user";
       })
       .addCase(assignBikeToUser.pending, (state) => {
         state.isUserLoading = true;
@@ -556,8 +423,8 @@ const userSlice = createSlice({
       })
       .addCase(assignBikeToUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error(payload.response?.message || "Could not assign a bike");
-        state.errMsg = payload.response?.message || "Could not assign a bike";
+        toast.error(payload?.message || "Could not assign a bike");
+        state.errMsg = payload?.message || "Could not assign a bike";
       })
       .addCase(returnBikeFromUser.pending, (state) => {
         state.isUserLoading = true;
@@ -569,7 +436,8 @@ const userSlice = createSlice({
       })
       .addCase(returnBikeFromUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/returnBikeFromUser");
+        toast.error(payload?.message || "Error in user/returnBikeFromUser");
+        state.errMsg = payload?.message || "Error in user/returnBikeFromUser";
       })
       .addCase(updateUserBattery.pending, (state) => {
         state.isUserLoading = true;
@@ -581,7 +449,7 @@ const userSlice = createSlice({
       })
       .addCase(updateUserBattery.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/updateUserBattery");
+        toast.error(payload?.message || "Error in user/updateUserBattery");
       })
       .addCase(getActiveUsers.pending, (state) => {
         state.isUserLoading = true;
@@ -593,7 +461,7 @@ const userSlice = createSlice({
       })
       .addCase(getActiveUsers.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/getActiveUsers");
+        toast.error(payload?.message || "Error in user/getActiveUsers");
       })
       .addCase(updatePayment.pending, (state) => {
         state.isUserLoading = true;
@@ -601,11 +469,11 @@ const userSlice = createSlice({
       })
       .addCase(updatePayment.fulfilled, (state) => {
         state.isUserLoading = false;
-        toast.success("Updated the pending amount details");
+        toast.success("Updated payment details successfully!");
       })
       .addCase(updatePayment.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/updatePayment");
+        toast.error(payload?.message || "Error in user/updatePayment");
       })
       .addCase(getUserBySearch.pending, (state) => {
         state.isUserLoading = true;
@@ -627,7 +495,7 @@ const userSlice = createSlice({
       })
       .addCase(getUserBySearch.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/getUserBySearch");
+        toast.error(payload?.message || "Error in user/getUserBySearch");
         state.errMsg = payload?.message || "Error in user/getUserBySearch";
       })
       .addCase(getUserByFilter.pending, (state) => {
@@ -649,7 +517,7 @@ const userSlice = createSlice({
       })
       .addCase(getUserByFilter.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/getUserByFilter");
+        toast.error(payload?.message || "Error in user/getUserByFilter");
         state.errMsg = payload?.message || "Error in user/getUserByFilter";
       })
       .addCase(deleteUser.pending, (state) => {
@@ -665,7 +533,7 @@ const userSlice = createSlice({
       })
       .addCase(deleteUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/deleteUser");
+        toast.error(payload?.message || "Error in user/deleteUser");
         state.errMsg = payload?.message || "Error in user/deleteUser";
       })
       .addCase(editUser.pending, (state) => {
@@ -677,7 +545,7 @@ const userSlice = createSlice({
       })
       .addCase(editUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/editUser");
+        toast.error(payload?.message || "Error in user/editUser");
         state.errMsg = payload?.message || "Error in user/editUser";
       })
       .addCase(toggleUserBlock.pending, (state) => {
@@ -693,30 +561,8 @@ const userSlice = createSlice({
       })
       .addCase(toggleUserBlock.rejected, (state, { payload }) => {
         state.isUserLoading = false;
-        toast.error("Error in user/toggleUserBlock");
+        toast.error(payload?.message || "Error in user/toggleUserBlock");
         state.errMsg = payload?.message || "Error in user/toggleUserBlock";
-      })
-      .addCase(createWeeklyPayments.fulfilled, (state, { payload }) => {
-        state.isUserLoading = false;
-        toast.success(`Created ${payload.created} weekly payment records`);
-      })
-      .addCase(createWeeklyPayments.rejected, (state, { payload }) => {
-        state.isUserLoading = false;
-        toast.error(payload.message || "Failed to create weekly payments");
-        state.errMsg = payload.message || "Failed to create weekly payments";
-      })
-      .addCase(updatePaymentStatus.pending, (state) => {
-        state.isUserLoading = true;
-        state.errMsg = null;
-      })
-      .addCase(updatePaymentStatus.fulfilled, (state) => {
-        state.isUserLoading = false;
-        toast.success("Payment status updated successfully!");
-      })
-      .addCase(updatePaymentStatus.rejected, (state, { payload }) => {
-        state.isUserLoading = false;
-        toast.error(payload.message || "Failed to update payment status");
-        state.errMsg = payload.message || "Failed to update payment status";
       });
   },
 });

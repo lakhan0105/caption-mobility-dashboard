@@ -2,7 +2,6 @@ import React from "react";
 import UserBikeDetails from "./UserBikeDetails";
 import UserBatteryDetails from "./UserBatteryDetails";
 import { FaTrash } from "react-icons/fa";
-
 import { FaPlus } from "react-icons/fa";
 import { showAssignForm, showModal } from "../../features/modal/modalSlice";
 import SimpleBtn from "../Buttons/SimpleBtn";
@@ -34,7 +33,7 @@ function UserRentalDetails({
       });
   }
 
-  // if the userbatteryid and bikeId is not present show a component to assign bike and a button tp delete a user
+  // if the userbatteryid and bikeId is not present show a component to assign bike and a button to delete a user
   if (!userBatteryId && !userBikeId) {
     return (
       <section className="text-sm mx-5 mt-5 px-3.5 py-5 rounded border border-zinc-200/70 bg-white/80 mb-8">
@@ -43,7 +42,7 @@ function UserRentalDetails({
         </p>
 
         <div className="flex gap-2">
-          {/* ASSING BUTTON */}
+          {/* ASSIGN BUTTON */}
           <SimpleBtn
             name={"assign"}
             icon={<FaPlus />}
