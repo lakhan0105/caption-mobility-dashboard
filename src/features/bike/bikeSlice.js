@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { databases } from "../../appwrite";
-import { ID, Query } from "appwrite";
+import { Query, ID } from "appwrite";
 import toast from "react-hot-toast";
 
 const dbId = import.meta.env.VITE_DB_ID;
@@ -58,7 +58,7 @@ export const getAvailableBikes = createAsyncThunk(
   "bike/getAvailableBikes",
   async (_, thunkAPI) => {
     try {
-      const limit = 100; // Maximum limit allowed by Appwrite
+      const limit = 100;
       let offset = 0;
       let allBikes = [];
       let total = 0;
@@ -70,8 +70,8 @@ export const getAvailableBikes = createAsyncThunk(
           Query.offset(offset),
         ]);
         allBikes = allBikes.concat(response.documents);
-        total = response.total; // Total number of available bikes
-        offset += limit; // Move to the next batch
+        total = response.total;
+        offset += limit;
       } while (offset < total);
 
       return allBikes;
@@ -81,29 +81,30 @@ export const getAvailableBikes = createAsyncThunk(
   }
 );
 
-// update the bike details when the assign button is clicked
-// (takes documentId as bikeId, userId, assignedAt, bikeStatus)
 export const updateBike = createAsyncThunk(
   "bike/updateBike",
   async (data, thunkAPI) => {
-    console.log("data in updateBike function...");
-
+    const { bikeId, userId, bikeStatus, returnedAt } = data;
     try {
+      const updateData = {
+        bikeStatus,
+        currOwner: userId,
+      };
+      if (bikeStatus) {
+        updateData.assignedAt = new Date().toISOString();
+      }
+      if (!bikeStatus && returnedAt) {
+        updateData.returnedAt = returnedAt;
+      }
+
       const response = await databases.updateDocument(
-        dbId, // databaseId
-        bikesCollId, // collectionId
-        data.bikeId, // documentId
-
-        {
-          bikeStatus: data.bikeStatus,
-          currOwner: data.userId,
-          assignedAt: new Date(),
-        }
+        dbId,
+        bikesCollId,
+        bikeId,
+        updateData
       );
-
       console.log("response after updating the bike details");
       console.log(response);
-
       return response;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -111,7 +112,6 @@ export const updateBike = createAsyncThunk(
   }
 );
 
-// add new bike
 export const addBike = createAsyncThunk(
   "bike/addBike",
   async (data, thunkAPI) => {
@@ -122,7 +122,6 @@ export const addBike = createAsyncThunk(
         ID.unique(),
         data
       );
-
       return resp;
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
@@ -130,12 +129,10 @@ export const addBike = createAsyncThunk(
   }
 );
 
-// edit bike reg number
 export const editBikeRegNum = createAsyncThunk(
   "bike/editBikeRegNum",
   async (data, thunkAPI) => {
     const { bikeId, bikeRegNum } = data;
-
     console.log(data);
     try {
       const resp = await databases.updateDocument(dbId, bikesCollId, bikeId, {
@@ -174,19 +171,17 @@ const bikeSlice = createSlice({
   },
   extraReducers(builder) {
     builder
-      .addCase(getBikes.pending, (state, action) => {
+      .addCase(getBikes.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(getBikes.fulfilled, (state, { payload, meta }) => {
         state.isLoading = false;
         console.log("we found the bikes data");
-
         if (meta.arg === 0) {
           state.bikesList = payload.documents;
         } else {
           state.bikesList = [...state.bikesList, ...payload.documents];
         }
-
         state.bikesListCount = payload.total;
       })
       .addCase(getBikes.rejected, (state, { payload }) => {
@@ -204,7 +199,7 @@ const bikeSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
-      .addCase(getAvailableBikes.pending, (state, action) => {
+      .addCase(getAvailableBikes.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(getAvailableBikes.fulfilled, (state, { payload }) => {
@@ -214,22 +209,23 @@ const bikeSlice = createSlice({
       })
       .addCase(getAvailableBikes.rejected, (state, { payload }) => {
         state.isLoading = false;
-        alert("error in getAvailableBikes");
+        toast.error("error in getAvailableBikes");
         console.log(payload);
       })
-      .addCase(updateBike.pending, (state, action) => {
+      .addCase(updateBike.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(updateBike.fulfilled, (state, { payload }) => {
         state.isLoading = false;
         console.log("updated the bike details...");
+        toast.success("Updated bike details successfully!");
       })
       .addCase(updateBike.rejected, (state, { payload }) => {
         state.isLoading = false;
         toast.error("error in updateBike");
         console.log(payload);
       })
-      .addCase(addBike.pending, (state, action) => {
+      .addCase(addBike.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(addBike.fulfilled, (state, { payload }) => {
@@ -244,7 +240,7 @@ const bikeSlice = createSlice({
         }
         console.log(payload);
       })
-      .addCase(editBikeRegNum.pending, (state, action) => {
+      .addCase(editBikeRegNum.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(editBikeRegNum.fulfilled, (state, { payload }) => {
@@ -256,14 +252,12 @@ const bikeSlice = createSlice({
         console.log(payload.code);
         console.log(payload);
       })
-      .addCase(deleteBike.pending, (state, action) => {
+      .addCase(deleteBike.pending, (state) => {
         state.isLoading = true;
       })
       .addCase(deleteBike.fulfilled, (state, { meta }) => {
         state.isLoading = false;
-
-        // update the bikesList and bikesListCount after deleteBike
-        const bikeId = meta.arg; // bikeId passed to deleteBike
+        const bikeId = meta.arg;
         state.bikesList = state.bikesList.filter((bike) => bike.$id !== bikeId);
         state.bikesListCount -= 1;
         toast.success("deleted the bike successfully!");

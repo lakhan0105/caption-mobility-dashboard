@@ -1,6 +1,4 @@
-// This component is for taking the input details for adding a new user
 import React, { useEffect, useState } from "react";
-import InputRow from "./InputRow";
 import { useDispatch, useSelector } from "react-redux";
 import { closeModal, hideOptionsModal } from "../features/modal/modalSlice";
 import { createUser, editUser, getUsersList } from "../features/user/UserSlice";
@@ -11,9 +9,30 @@ import {
   addCompanyIfNew,
   getCompanyNames,
 } from "../features/company/companySlice";
-import { Button, TextField } from "@mui/material";
+import {
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
 import { storage } from "../appwrite";
+
 const userBucketId = import.meta.env.VITE_USER_BUCKET_ID;
+
+// Predefined list of companies
+const companyOptions = [
+  "Zomato",
+  "Blinkit",
+  "Zepto",
+  "Eatsure",
+  "Lucious",
+  "RR",
+  "Flipkart",
+  "BBN",
+  "Box8",
+  "Swiggy",
+];
 
 function UserForm() {
   const { isEditUser, selectedUser } = useSelector(
@@ -32,36 +51,37 @@ function UserForm() {
 
   const [userPhoto, setUserPhoto] = useState(null);
 
-  // when this component load, check if isEdit is true, if true then automatically fill the form with the details, so the user can edit it
+  // Pre-fill form for editing
   useEffect(() => {
-    if (isEditUser) {
+    if (isEditUser && selectedUser) {
       setUserInputState({
-        userName: selectedUser?.userName,
-        userRegisterId: selectedUser?.userRegisterId,
-        userPhone: selectedUser?.userPhone,
-        userCompany: selectedUser?.userCompany,
-        userLocation: selectedUser?.userLocation,
+        userName: selectedUser.userName || "",
+        userRegisterId: selectedUser.userRegisterId || "",
+        userPhone: selectedUser.userPhone || "",
+        userCompany: selectedUser.userCompany || "",
+        userLocation: selectedUser.userLocation || "",
       });
     }
-  }, []);
+  }, [isEditUser, selectedUser]);
 
-  // handleCloseModal
+  // Handle modal close
   function handleCloseModal() {
     dispatch(closeModal());
     dispatch(hideOptionsModal());
   }
 
-  // handleChange
+  // Handle input change
   function handleChange(e) {
     const key = e.target.name;
     let value = e.target.value;
 
-    setUserInputState((prev) => {
-      return { ...prev, [key]: value };
-    });
+    setUserInputState((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   }
 
-  // postUserSuccess
+  // Handle success after user creation or update
   function postUserSuccess(msg, companyName) {
     if (!companyName) {
       toast.error("Company name is required");
@@ -79,6 +99,7 @@ function UserForm() {
           userCompany: "",
           userLocation: "",
         });
+        setUserPhoto(null);
         dispatch(closeModal());
         toast.success(msg);
         dispatch(getUsersList());
@@ -91,16 +112,15 @@ function UserForm() {
       });
   }
 
-  // handleAddUser
+  // Handle adding a new user
   async function handleAddUser(e) {
     e.preventDefault();
     const docID = ID.unique();
 
     console.log("running handleAddUser...");
 
-    // save the user photo before saving his information
+    // Save the user photo before saving information
     let imageId = null;
-
     if (userPhoto) {
       try {
         const imageUpload = await storage.createFile(
@@ -109,7 +129,7 @@ function UserForm() {
           userPhoto
         );
         imageId = imageUpload.$id;
-        console.log(imageId);
+        console.log("Uploaded image ID:", imageId);
       } catch (error) {
         console.error("Error uploading image:", error);
         toast.error("Failed to upload photo");
@@ -130,47 +150,80 @@ function UserForm() {
     dispatch(createUser(userData))
       .then((resp) => {
         if (createUser.fulfilled.match(resp)) {
-          // if the user has been created successfully then add a company name (if new)
           postUserSuccess(
-            "user created successfully!",
+            "User created successfully!",
             userInputState.userCompany.toLowerCase()
           );
         }
       })
       .catch((error) => {
-        alert("Error in creating the user!", error);
+        console.error("Error creating user:", error);
+        toast.error("Error in creating the user!");
       });
   }
 
-  // handleEditUser
-  function handleEditUser(e) {
+  // Handle editing an existing user
+  async function handleEditUser(e) {
     e.preventDefault();
-    console.log("edit the user details");
-    console.log({ userId: selectedUser?.$id, ...userInputState });
-    dispatch(editUser({ userId: selectedUser?.$id, ...userInputState }))
+    console.log("Editing user details:", {
+      userId: selectedUser?.$id,
+      ...userInputState,
+    });
+
+    // Handle photo update if a new photo is selected
+    let imageId = selectedUser?.userPhotoId || null;
+    if (userPhoto) {
+      try {
+        const imageUpload = await storage.createFile(
+          userBucketId,
+          ID.unique(),
+          userPhoto
+        );
+        imageId = imageUpload.$id;
+        console.log("Uploaded new image ID:", imageId);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        toast.error("Failed to upload photo");
+        return;
+      }
+    }
+
+    const userData = {
+      userId: selectedUser?.$id,
+      userName: userInputState.userName.toLowerCase(),
+      userRegisterId: userInputState.userRegisterId,
+      userPhone: userInputState.userPhone,
+      userCompany: userInputState.userCompany.toLowerCase(),
+      userLocation: userInputState.userLocation.toLowerCase(),
+      userPhotoId: imageId,
+    };
+
+    dispatch(editUser(userData))
       .then((resp) => {
         if (editUser.fulfilled.match(resp)) {
           postUserSuccess(
-            "updated successfully!",
+            "Updated successfully!",
             userInputState.userCompany.toLowerCase()
           );
         }
       })
       .catch((error) => {
-        alert("error in updating user details", error);
+        console.error("Error updating user:", error);
+        toast.error("Error in updating user details!");
       });
   }
 
   return (
     <form
-      className="bg-white w-full max-w-[380px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative "
-      onSubmit={!isEditUser ? handleAddUser : handleEditUser}
+      className="bg-white w-full max-w-[380px] px-10 py-10 pt-14 rounded flex flex-col gap-4 relative"
+      onSubmit={isEditUser ? handleEditUser : handleAddUser}
     >
       <button
         className="absolute right-4 top-4 cursor-pointer"
         onClick={handleCloseModal}
+        type="button"
       >
-        close
+        Close
       </button>
 
       <h2 className="text-2xl mb-2">User Details</h2>
@@ -181,8 +234,8 @@ function UserForm() {
         required
         size="small"
         onChange={handleChange}
-        value={userInputState?.userName}
-        id="outlined-basic"
+        value={userInputState.userName}
+        id="userName"
         label="Full Name"
         variant="outlined"
       />
@@ -191,10 +244,10 @@ function UserForm() {
       <TextField
         name="userRegisterId"
         size="small"
-        label="Register Id"
+        label="Register ID"
         required
         onChange={handleChange}
-        value={userInputState?.userRegisterId}
+        value={userInputState.userRegisterId}
       />
 
       {/* PHONE */}
@@ -204,18 +257,29 @@ function UserForm() {
         label="Phone"
         required
         onChange={handleChange}
-        value={userInputState?.userPhone}
+        value={userInputState.userPhone}
       />
 
-      {/* COMPANY*/}
-      <TextField
-        name="userCompany"
-        size="small"
-        label="Company"
-        required
-        onChange={handleChange}
-        value={userInputState?.userCompany}
-      />
+      {/* COMPANY */}
+      <FormControl size="small" required>
+        <InputLabel id="userCompany-label">Company</InputLabel>
+        <Select
+          labelId="userCompany-label"
+          name="userCompany"
+          value={userInputState.userCompany}
+          label="Company"
+          onChange={handleChange}
+        >
+          <MenuItem value="">
+            <em>Select a company</em>
+          </MenuItem>
+          {companyOptions.map((company) => (
+            <MenuItem key={company} value={company.toLowerCase()}>
+              {company}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
       {/* USER LOCATION */}
       <TextField
@@ -224,7 +288,7 @@ function UserForm() {
         label="Location"
         required
         onChange={handleChange}
-        value={userInputState?.userLocation}
+        value={userInputState.userLocation}
       />
 
       {/* USER PHOTO INPUT */}
@@ -235,7 +299,7 @@ function UserForm() {
         onChange={(e) => setUserPhoto(e.target.files[0])}
       />
 
-      <SubmitBtn text={isEditUser ? "update" : "Create a new user"} />
+      <SubmitBtn text={isEditUser ? "Update" : "Create a new user"} />
     </form>
   );
 }

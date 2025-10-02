@@ -4,7 +4,6 @@ import { MdOutlinePayment } from "react-icons/md";
 import { FaRegEdit } from "react-icons/fa";
 import { useDispatch } from "react-redux";
 import { databases } from "../../appwrite";
-import { Query } from "appwrite";
 import {
   showEditPaymentModal,
   showModal,
@@ -21,7 +20,7 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
   });
 
   const dbId = import.meta.env.VITE_DB_ID;
-  const paymentRecordsCollId = import.meta.env.VITE_PAYMENT_RECORDS_COLL_ID;
+  const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 
   useEffect(() => {
     if (userId) {
@@ -33,43 +32,16 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
     try {
       setPaymentData((prev) => ({ ...prev, loading: true }));
 
-      console.log("Fetching payments for userId:", userId);
-      console.log("Using collection:", paymentRecordsCollId);
+      console.log("Fetching user data for userId:", userId);
+      console.log("Using collection:", usersCollId);
 
-      const response = await databases.listDocuments(
-        dbId,
-        paymentRecordsCollId,
-        [Query.equal("userId", userId)]
-      );
+      const response = await databases.getDocument(dbId, usersCollId, userId);
 
-      console.log("Payment records found:", response.documents);
+      console.log("User data found:", response);
 
-      let depositAmount = 0;
-      let paidAmount = 0;
-      let pendingAmount = 0;
+      const { depositAmount = 0, paidAmount = 0, pendingAmount = 0 } = response;
 
-      response.documents.forEach((payment) => {
-        const amount = payment.amount || 0;
-        console.log(`Payment: ${payment.type} - ₹${amount}`);
-
-        switch (payment.type) {
-          case "deposit":
-            depositAmount += amount;
-            break;
-          case "rent":
-          case "collected":
-            paidAmount += amount;
-            break;
-          case "pending":
-            pendingAmount += amount;
-            break;
-          default:
-            console.log("Unknown payment type:", payment.type);
-            break;
-        }
-      });
-
-      console.log("Calculated totals:", {
+      console.log("Payment details:", {
         depositAmount,
         paidAmount,
         pendingAmount,
@@ -124,10 +96,10 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
 
   return (
     <InfoCardOne
-      headingIcon={<werkte:MdOutlinePayment />}
+      headingIcon={<MdOutlinePayment />}
       heading={"payment details"}
       cardBtnName={"edit"}
-      card配件:cardBtnIcon={<FaRegEdit />}
+      cardBtnIcon={<FaRegEdit />}
       cardExtraStyles={
         "border-[1.45px] border-red-400/50 font-semibold text-red-500 text-xs capitalize"
       }
@@ -135,15 +107,15 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
     >
       <InfoCardRow
         heading={"deposit amount"}
-        value={`₹ ${paymentData.depositAmount.toLocaleString("en-IN")}`}
+        value={`₹ ${paymentData.depositAmount}`}
       />
       <InfoCardRow
         heading={"paid amount"}
-        value={`₹ ${paymentData.paidAmount.toLocaleString("en-IN")}`}
+        value={`₹ ${paymentData.paidAmount}`}
       />
       <InfoCardRow
         heading={"pending amount"}
-        value={`₹ ${paymentData.pendingAmount.toLocaleString("en-IN")}`}
+        value={`₹ ${paymentData.pendingAmount}`}
       />
     </InfoCardOne>
   );

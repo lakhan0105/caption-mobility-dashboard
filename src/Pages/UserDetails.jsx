@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react"; // Add useRef
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router";
 import { FaPhoneAlt } from "react-icons/fa";
 import { FaRegMessage } from "react-icons/fa6";
@@ -20,7 +20,7 @@ function UserDetails() {
   const param = useParams();
   const paramId = param.id;
   const [userDetails, setUserDetails] = useState();
-  const paymentDetailsRef = useRef(null); // Create ref for UserPaymentDetails
+  const paymentDetailsRef = useRef(null);
 
   const dispatch = useDispatch();
 
@@ -112,7 +112,7 @@ function UserDetails() {
           <Tabs
             userDetails={userDetails}
             handleReturnBike={handleReturnBike}
-            paymentDetailsRef={paymentDetailsRef} // Pass the ref to Tabs
+            paymentDetailsRef={paymentDetailsRef}
           />
 
           <Modal>
@@ -134,7 +134,7 @@ function UserDetails() {
                 getUser={getUser}
                 onPaymentUpdated={() =>
                   paymentDetailsRef.current?.refreshPayments()
-                } // Pass the refresh function
+                }
               />
             )}
             {isLoading && <h2 className="text-white">Loading...</h2>}

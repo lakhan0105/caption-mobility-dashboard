@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { databases } from "../appwrite";
 import { Query } from "appwrite";
+import { updatePayment, returnBikeFromUser } from "../features/user/UserSlice"; // Import thunks
+import toast from "react-hot-toast";
 
 const Payments = () => {
   const dbId = import.meta.env.VITE_DB_ID;
   const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
-  const paymentRecordsCollId = import.meta.env.VITE_PAYMENT_RECORDS_COLL_ID;
   const companyCollId = import.meta.env.VITE_COMPANY_COLL_ID;
+  const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
+
+  const dispatch = useDispatch(); // Initialize Redux dispatch
 
   const [payments, setPayments] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -16,41 +21,11 @@ const Payments = () => {
   const [collectingPayment, setCollectingPayment] = useState(null);
 
   useEffect(() => {
-    const cachedCompanies = localStorage.getItem("companies_cache");
-    const cacheTime = localStorage.getItem("companies_cache_time");
-
-    if (cachedCompanies && cacheTime) {
-      const timeDiff = Date.now() - parseInt(cacheTime);
-      if (timeDiff < 5 * 60 * 1000) {
-        setCompanies(JSON.parse(cachedCompanies));
-        return;
-      }
-    }
     fetchCompanies();
   }, []);
 
   useEffect(() => {
     if (selectedCompany) {
-      const cachedPayments = localStorage.getItem(
-        `payments_${selectedCompany}`
-      );
-      const cacheTime = localStorage.getItem(
-        `payments_${selectedCompany}_time`
-      );
-
-      if (cachedPayments && cacheTime) {
-        const timeDiff = Date.now() - parseInt(cacheTime);
-        if (timeDiff < 2 * 60 * 1000) {
-          const parsedPayments = JSON.parse(cachedPayments);
-          setPayments(parsedPayments);
-          const total = parsedPayments.reduce(
-            (sum, payment) => sum + payment.amount,
-            0
-          );
-          setTotalAmount(total);
-          return;
-        }
-      }
       fetchTodaysPayments();
     }
   }, [selectedCompany]);
@@ -59,11 +34,6 @@ const Payments = () => {
     try {
       const response = await databases.listDocuments(dbId, companyCollId);
       setCompanies(response.documents);
-      localStorage.setItem(
-        "companies_cache",
-        JSON.stringify(response.documents)
-      );
-      localStorage.setItem("companies_cache_time", Date.now().toString());
     } catch (error) {
       console.error("Error fetching companies:", error);
     }
@@ -75,76 +45,109 @@ const Payments = () => {
       const selectedCompanyData = companies.find(
         (c) => c.$id === selectedCompany
       );
-
       if (!selectedCompanyData) {
-        setLoading(false);
-        return;
-      }
-
-      console.log("Selected company:", selectedCompanyData.companyName);
-
-      const usersResponse = await databases.listDocuments(dbId, usersCollId, [
-        Query.equal("userCompany", selectedCompanyData.companyName),
-      ]);
-
-      console.log("Users found for company:", usersResponse.documents.length);
-
-      if (usersResponse.documents.length === 0) {
         setPayments([]);
         setTotalAmount(0);
         setLoading(false);
         return;
       }
 
-      const companyUserIds = usersResponse.documents.map((user) => user.$id);
-      console.log("User IDs:", companyUserIds);
+      console.log("Selected company:", selectedCompanyData.companyName);
 
-      const paymentsResponse = await databases.listDocuments(
-        dbId,
-        paymentRecordsCollId,
-        [Query.equal("type", "pending")]
-      );
+      // Fetch users with pagination
+      const limit = 100;
+      let offset = 0;
+      let allUsers = [];
+      let hasMore = true;
 
-      console.log("All pending payments:", paymentsResponse.documents.length);
+      while (hasMore) {
+        const response = await databases.listDocuments(dbId, usersCollId, [
+          Query.contains("userCompany", selectedCompanyData.companyName),
+          Query.limit(limit),
+          Query.offset(offset),
+        ]);
+        allUsers = allUsers.concat(response.documents);
+        offset += limit;
+        hasMore = response.documents.length === limit;
+      }
 
-      const userPayments = [];
-      const userMap = {};
+      console.log("Matched users:", allUsers.length);
 
-      usersResponse.documents.forEach((user) => {
-        userMap[user.$id] = user;
-      });
+      if (allUsers.length === 0) {
+        setPayments([]);
+        setTotalAmount(0);
+        setLoading(false);
+        return;
+      }
 
-      paymentsResponse.documents.forEach((payment) => {
-        if (companyUserIds.includes(payment.userId)) {
-          const user = userMap[payment.userId];
-          if (user) {
-            userPayments.push({
-              ...payment,
+      // Fetch bike details for users with bikes
+      const userPayments = await Promise.all(
+        allUsers
+          .filter((user) => {
+            const hasPending = parseInt(user.pendingAmount || 0) > 0;
+            const hasBike = user.bikeId && user.bikeId.trim() !== "";
+            return hasPending || hasBike;
+          })
+          .map(async (user) => {
+            const pendingAmount = parseInt(user.pendingAmount || 0);
+            const hasBike = user.bikeId && user.bikeId.trim() !== "";
+            const weeklyRent = hasBike ? 1700 : 0;
+            const totalToCollect = pendingAmount + weeklyRent;
+
+            // Fetch bike details if user has a bike
+            let daysSinceRent = 0;
+            let assignedAt = null;
+            if (hasBike) {
+              try {
+                const bike = await databases.getDocument(
+                  dbId,
+                  bikesCollId,
+                  user.bikeId
+                );
+                assignedAt = bike.assignedAt;
+                if (assignedAt) {
+                  const assignedDate = new Date(assignedAt);
+                  const currentDate = new Date();
+                  const timeDiff = currentDate - assignedDate;
+                  daysSinceRent = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                }
+              } catch (error) {
+                console.error(`Error fetching bike ${user.bikeId}:`, error);
+              }
+            }
+
+            return {
+              $id: user.$id,
+              userId: user.$id,
               userName: user.userName,
               userPhone: user.userPhone,
-            });
-          }
-        }
-      });
+              userCompany: user.userCompany,
+              bikeId: user.bikeId || null,
+              batteryId: user.batteryId || null, // Include batteryId for returnBikeFromUser
+              hasBike,
+              depositAmount: parseInt(user.depositAmount || 0),
+              paidAmount: parseInt(user.paidAmount || 0),
+              pendingAmount,
+              weeklyRent,
+              totalToCollect,
+              daysSinceRent,
+              lastRentDate: user.lastRentCollectionDate || null,
+              type: "pending",
+              method: "cash",
+              date: new Date().toISOString(),
+            };
+          })
+      );
 
-      console.log("Filtered payments for company:", userPayments.length);
-
-      setPayments(userPayments);
+      console.log("Users with payments due:", userPayments.length);
 
       const total = userPayments.reduce(
-        (sum, payment) => sum + payment.amount,
+        (sum, payment) => sum + payment.totalToCollect,
         0
       );
-      setTotalAmount(total);
 
-      localStorage.setItem(
-        `payments_${selectedCompany}`,
-        JSON.stringify(userPayments)
-      );
-      localStorage.setItem(
-        `payments_${selectedCompany}_time`,
-        Date.now().toString()
-      );
+      setPayments(userPayments);
+      setTotalAmount(total);
     } catch (error) {
       console.error("Error fetching payments:", error);
     } finally {
@@ -153,96 +156,97 @@ const Payments = () => {
   };
 
   const collectPayment = async (payment) => {
+    const confirmMsg = payment.hasBike
+      ? `Collect ₹${payment.totalToCollect} from ${payment.userName} and RETURN bike?\n\nBreakdown:\n- Pending: ₹${payment.pendingAmount}\n- Weekly Rent: ₹${payment.weeklyRent}\n- Total: ₹${payment.totalToCollect}\n\n⚠️ Bike will be returned!`
+      : `Collect ₹${payment.totalToCollect} from ${payment.userName}?\n\nBreakdown:\n- Pending: ₹${payment.pendingAmount}\n- Weekly Rent: ₹${payment.weeklyRent}\n- Total: ₹${payment.totalToCollect}`;
+
+    if (!confirm(confirmMsg)) return;
+
     setCollectingPayment(payment.$id);
     try {
-      // Update the payment record to mark as collected
-      await databases.updateDocument(dbId, paymentRecordsCollId, payment.$id, {
-        type: "collected",
-      });
+      // Calculate new values
+      const newPaidAmount =
+        Number(payment.paidAmount) + Number(payment.totalToCollect);
 
-      // Update user's pending amount (subtract the collected amount)
-      const user = await databases.getDocument(
-        dbId,
-        usersCollId,
-        payment.userId
-      );
-      const currentPending = parseInt(user.pendingAmount || "0");
-      const newPending = Math.max(0, currentPending - payment.amount);
+      // Update payment details using updatePayment thunk
+      await dispatch(
+        updatePayment({
+          userId: payment.userId,
+          pendingAmount: 0,
+        })
+      ).unwrap();
 
-      await databases.updateDocument(dbId, usersCollId, payment.userId, {
-        pendingAmount: newPending, // Send as integer
-      });
+      // Update user document with paid amount and last rent collection date
+      const updateData = {
+        paidAmount: newPaidAmount,
+      };
+      if (payment.weeklyRent > 0) {
+        updateData.lastRentCollectionDate = new Date().toISOString();
+      }
 
-      // Remove the collected payment from the list
+      // If user has a bike, return it using returnBikeFromUser thunk
+      if (payment.hasBike && payment.bikeId) {
+        await dispatch(
+          returnBikeFromUser({
+            userId: payment.userId,
+            bikeId: payment.bikeId,
+            batteryId: payment.batteryId || null,
+            totalSwapCount: 0, // Adjust if you track swap count
+          })
+        ).unwrap();
+      } else {
+        // Update user document if no bike is returned
+        await databases.updateDocument(
+          dbId,
+          usersCollId,
+          payment.userId,
+          updateData
+        );
+      }
+
+      // Update UI
       const updatedPayments = payments.filter((p) => p.$id !== payment.$id);
       setPayments(updatedPayments);
-
-      // Update total amount
-      const newTotal = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
+      const newTotal = updatedPayments.reduce(
+        (sum, p) => sum + p.totalToCollect,
+        0
+      );
       setTotalAmount(newTotal);
 
-      // Update cache
-      localStorage.setItem(
-        `payments_${selectedCompany}`,
-        JSON.stringify(updatedPayments)
-      );
-      localStorage.setItem(
-        `payments_${selectedCompany}_time`,
-        Date.now().toString()
-      );
-
-      alert(
-        `₹${payment.amount} collected successfully from ${payment.userName}!`
-      );
+      const successMsg = payment.hasBike
+        ? `✅ ₹${payment.totalToCollect} collected and bike returned!\n\nNew paid amount: ₹${newPaidAmount}`
+        : `✅ ₹${payment.totalToCollect} collected!\n\nNew paid amount: ₹${newPaidAmount}`;
+      toast.success(successMsg);
     } catch (error) {
-      console.error("Error collecting payment:", error);
-      alert("Failed to collect payment. Please try again.");
+      console.error("Error collecting payment:", {
+        code: error.code,
+        message: error.message,
+        type: error.type,
+      });
+      toast.error(
+        `❌ Failed to collect payment: ${error.message} (Code: ${
+          error.code || "N/A"
+        })`
+      );
     } finally {
       setCollectingPayment(null);
     }
   };
 
   const refreshData = () => {
-    localStorage.removeItem("companies_cache");
-    localStorage.removeItem("companies_cache_time");
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith("payments_")) {
-        localStorage.removeItem(key);
-      }
-    });
-
-    setPayments([]);
-    setSelectedCompany("");
-    fetchCompanies();
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getPaymentTypeColor = (type) => {
-    switch (type.toLowerCase()) {
-      case "rent":
-        return "bg-blue-100 text-blue-800";
-      case "deposit":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+    if (selectedCompany) {
+      fetchTodaysPayments();
     }
   };
 
-  const getMethodBadge = (method) => {
-    return method === "cash"
-      ? "bg-yellow-100 text-yellow-800"
-      : "bg-purple-100 text-purple-800";
+  const formatDate = (dateString) => {
+    return dateString
+      ? new Date(dateString).toLocaleDateString("en-IN", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : "N/A";
   };
 
   return (
@@ -254,7 +258,7 @@ const Payments = () => {
               Pending Payments Collection
             </h1>
             <p className="text-gray-600">
-              View all pending payments by company
+              Collect pending amounts and weekly rent (₹1,700) due every 7 days
             </p>
           </div>
           <button
@@ -290,17 +294,17 @@ const Payments = () => {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Pending Payments Collection
+                  Payments Due Today
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {payments.length} pending payment(s) found
+                  {payments.length} user(s) with payments due
                 </p>
               </div>
               <div className="text-left sm:text-right">
                 <p className="text-2xl font-bold text-green-600">
                   ₹{totalAmount.toLocaleString("en-IN")}
                 </p>
-                <p className="text-sm text-gray-600">Total Amount</p>
+                <p className="text-sm text-gray-600">Total to Collect</p>
               </div>
             </div>
           </div>
@@ -313,7 +317,7 @@ const Payments = () => {
           ) : payments.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
               <p className="text-gray-600">
-                No pending payments found for this company
+                No payments due for this company today
               </p>
             </div>
           ) : (
@@ -327,19 +331,22 @@ const Payments = () => {
                           User Name
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Company
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Phone
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Amount
+                          Days Since Rent
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type
+                          Pending
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Method
+                          Weekly Rent
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
+                          Total to Collect
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Action
@@ -353,31 +360,36 @@ const Payments = () => {
                             {payment.userName || "N/A"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {payment.userCompany || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {payment.userPhone || "N/A"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            ₹{payment.amount.toLocaleString("en-IN")}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeColor(
-                                payment.type
-                              )}`}
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                payment.daysSinceRent >= 7
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}
                             >
-                              {payment.type}
+                              {payment.daysSinceRent} days
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMethodBadge(
-                                payment.method
-                              )}`}
-                            >
-                              {payment.method}
-                            </span>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ₹{payment.pendingAmount.toLocaleString("en-IN")}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(payment.date)}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {payment.weeklyRent > 0 ? (
+                              <span className="text-red-600 font-medium">
+                                ₹{payment.weeklyRent.toLocaleString("en-IN")}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">Not due</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                            ₹{payment.totalToCollect.toLocaleString("en-IN")}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             <button
@@ -413,49 +425,57 @@ const Payments = () => {
                           {payment.userName || "N/A"}
                         </h3>
                         <p className="text-sm text-gray-500">
+                          {payment.userCompany || "N/A"}
+                        </p>
+                        <p className="text-sm text-gray-500">
                           {payment.userPhone || "N/A"}
                         </p>
+                        <div className="mt-2">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              payment.daysSinceRent >= 7
+                                ? "bg-red-100 text-red-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {payment.daysSinceRent} days since rent
+                          </span>
+                        </div>
                       </div>
                       <div className="text-right ml-4">
                         <p className="text-lg font-bold text-gray-900">
-                          ₹{payment.amount.toLocaleString("en-IN")}
+                          ₹{payment.totalToCollect.toLocaleString("en-IN")}
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeColor(
-                          payment.type
-                        )}`}
-                      >
-                        {payment.type}
-                      </span>
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMethodBadge(
-                          payment.method
-                        )}`}
-                      >
-                        {payment.method}
-                      </span>
+                    <div className="text-xs text-gray-600 mb-3 space-y-1">
+                      <div>
+                        Pending: ₹
+                        {payment.pendingAmount.toLocaleString("en-IN")}
+                      </div>
+                      <div>
+                        Weekly Rent:{" "}
+                        {payment.weeklyRent > 0
+                          ? `₹${payment.weeklyRent.toLocaleString("en-IN")}`
+                          : "Not due"}
+                      </div>
+                      <div>Last Rent: {formatDate(payment.lastRentDate)}</div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-gray-500">
-                        {formatDate(payment.date)}
-                      </p>
-                      <button
-                        onClick={() => collectPayment(payment)}
-                        disabled={collectingPayment === payment.$id}
-                        className={`px-4 py-2 rounded-md text-sm font-medium ${
-                          collectingPayment === payment.$id
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                        }`}
-                      >
-                        {collectingPayment === payment.$id
-                          ? "Collecting..."
-                          : "Collect"}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => collectPayment(payment)}
+                      disabled={collectingPayment === payment.$id}
+                      className={`w-full px-4 py-2 rounded-md text-sm font-medium ${
+                        collectingPayment === payment.$id
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-green-600 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      }`}
+                    >
+                      {collectingPayment === payment.$id
+                        ? "Collecting..."
+                        : `Collect ₹${payment.totalToCollect.toLocaleString(
+                            "en-IN"
+                          )}`}
+                    </button>
                   </div>
                 ))}
               </div>

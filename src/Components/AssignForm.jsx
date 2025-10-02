@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { closeModal } from "../features/modal/modalSlice";
 import { getAvailableBikes } from "../features/bike/bikeSlice";
 import SubmitBtn from "./Buttons/SubmitBtn";
-
 import { assignBikeToUser } from "../features/user/UserSlice";
 import { getAvailableBatteries } from "../features/battery/batterySlice";
 import InputRow from "./InputRow";
@@ -34,8 +33,6 @@ function AssignForm({ getUser, oldPendingAmount }) {
     paidAmount: 0,
     pendingAmount: 0,
     chargerStatus: false,
-    depositMethod: "cash", // New: Default payment method
-    paidMethod: "cash", // New: Default payment method
   });
 
   function handleChange(e) {
@@ -143,17 +140,6 @@ function AssignForm({ getUser, oldPendingAmount }) {
           handleChange={handleChange}
           value={assignmentData.depositAmount}
         />
-        <label htmlFor="depositMethod">Deposit Payment Method</label>
-        <select
-          name="depositMethod"
-          id="depositMethod"
-          className="border rounded text-sm block w-full"
-          onChange={handleChange}
-          value={assignmentData.depositMethod}
-        >
-          <option value="cash">Cash</option>
-          <option value="online">Online</option>
-        </select>
       </div>
 
       <div>
@@ -164,17 +150,6 @@ function AssignForm({ getUser, oldPendingAmount }) {
           handleChange={handleChange}
           value={assignmentData.paidAmount}
         />
-        <label htmlFor="paidMethod">Paid Payment Method</label>
-        <select
-          name="paidMethod"
-          id="paidMethod"
-          className="border rounded text-sm block w-full"
-          onChange={handleChange}
-          value={assignmentData.paidMethod}
-        >
-          <option value="cash">Cash</option>
-          <option value="online">Online</option>
-        </select>
       </div>
 
       <div>
