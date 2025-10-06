@@ -10,6 +10,7 @@ const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
 const adminTeamId = import.meta.env.VITE_ADMINS_TEAM_ID;
 const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
 const companyCollId = import.meta.env.VITE_COMPANY_COLL_ID;
+const paymentRecordsCollId = import.meta.env.VITE_PAYMENT_RECORDS_COLL_ID; // Add this to your .env
 
 const initialState = {
   isUserLoading: false,
@@ -282,40 +283,83 @@ export const getActiveUsers = createAsyncThunk(
 export const returnBikeFromUser = createAsyncThunk(
   "user/returnBikeFromUser",
   async ({ userId, bikeId, batteryId, totalSwapCount }, thunkAPI) => {
+    const DAILY_RATE = 1700 / 7; // Match your Payments component
     try {
-      const response = await databases.updateDocument(
-        dbId,
-        usersCollId,
-        userId,
-        {
-          userStatus: false,
-          bikeId: null,
-          batteryId: null,
-          totalSwapCount,
-        }
-      );
-      if (response) {
-        await thunkAPI
-          .dispatch(
-            updateBike({
-              bikeId,
-              userId: null,
-              bikeStatus: false,
-              returnedAt: new Date().toISOString(),
-            })
-          )
-          .unwrap();
-        await thunkAPI.dispatch(
-          updateBattery({
-            batteryId,
+      // Step 1: Fetch user and bike for final rent calculation
+      const user = await databases.getDocument(dbId, usersCollId, userId);
+      const bike = await databases.getDocument(dbId, bikesCollId, bikeId);
+
+      // Calculate final pro-rated rent (up to return date)
+      let finalRentDue = 0;
+      let daysSinceLast = 0;
+      if (user.lastRentCollectionDate && bike.assignedAt) {
+        const lastPaymentDate = new Date(user.lastRentCollectionDate);
+        const currentDate = new Date();
+        const timeDiff = currentDate - lastPaymentDate;
+        daysSinceLast = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        finalRentDue = Math.round(DAILY_RATE * daysSinceLast);
+      }
+
+      // Step 2: Update user - clear assignments and mark cycle end
+      await databases.updateDocument(dbId, usersCollId, userId, {
+        userStatus: false,
+        bikeId: null,
+        batteryId: null,
+        totalSwapCount,
+        lastRentCollectionDate: new Date().toISOString(), // Mark cycle end
+      });
+
+      // Step 3: Update bike and battery status (keep existing dispatches)
+      await thunkAPI
+        .dispatch(
+          updateBike({
+            bikeId,
             userId: null,
-            batStatus: false,
-            assignedAt: null,
+            bikeStatus: false,
             returnedAt: new Date().toISOString(),
           })
-        );
+        )
+        .unwrap();
+      await thunkAPI.dispatch(
+        updateBattery({
+          batteryId,
+          userId: null,
+          batStatus: false,
+          assignedAt: null,
+          returnedAt: new Date().toISOString(),
+        })
+      );
+
+      // Step 4: Create a "cycle end" payment record for audit
+      await databases.createDocument(dbId, paymentRecordsCollId, ID.unique(), {
+        userId,
+        amount: 0, // Use finalRentDue if you auto-collect below
+        type: "bike_return_cycle_end",
+        method: "n/a",
+        date: new Date().toISOString(),
+      });
+
+      // Step 5: OPTIONAL - Auto-collect final rent on return (uncomment if desired)
+      /*
+      if (finalRentDue > 0) {
+        const newPaidAmount = Number(user.paidAmount) + finalRentDue;
+        await databases.updateDocument(dbId, usersCollId, userId, {
+          paidAmount: newPaidAmount,
+        });
+        await databases.createDocument(dbId, paymentRecordsCollId, ID.unique(), {
+          userId,
+          amount: finalRentDue,
+          type: "final_rent_on_return",
+          method: "cash", // Or prompt for method
+          date: new Date().toISOString(),
+        });
+        toast.success(`Bike returned & final rent ₹${finalRentDue} collected!`);
+      } else {
+        toast.success("Bike returned successfully. Payment cycle ended.");
       }
-      return response;
+      */
+
+      return { userId, bikeId, finalRentDue, daysSinceLast }; // For UI feedback
     } catch (error) {
       return thunkAPI.rejectWithValue(error);
     }
@@ -432,7 +476,9 @@ const userSlice = createSlice({
       })
       .addCase(returnBikeFromUser.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        toast.success("Returned bike from the user successfully!");
+        toast.success(
+          `Bike returned successfully! Final rent due was ₹${action.payload.finalRentDue} for ${action.payload.daysSinceLast} days. Payment cycle ended.`
+        );
       })
       .addCase(returnBikeFromUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;

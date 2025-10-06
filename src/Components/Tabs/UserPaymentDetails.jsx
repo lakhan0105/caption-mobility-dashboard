@@ -9,6 +9,7 @@ import {
   showModal,
 } from "../../features/modal/modalSlice";
 import InfoCardRow from "../InfoCardRow";
+import { Query } from "appwrite";
 
 const UserPaymentDetails = forwardRef(({ userId }, ref) => {
   const dispatch = useDispatch();
@@ -18,9 +19,53 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
     pendingAmount: 0,
     loading: true,
   });
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   const dbId = import.meta.env.VITE_DB_ID;
   const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
+  const paymentRecordsCollId = import.meta.env.VITE_PAYMENT_RECORDS_COLL_ID;
+
+  const fetchUserPayments = async () => {
+    try {
+      setPaymentData((prev) => ({ ...prev, loading: true }));
+      setHistoryLoading(true);
+
+      // Fetch user data
+      const response = await databases.getDocument(dbId, usersCollId, userId);
+      const { depositAmount = 0, paidAmount = 0, pendingAmount = 0 } = response;
+
+      setPaymentData({
+        depositAmount,
+        paidAmount,
+        pendingAmount,
+        loading: false,
+      });
+
+      // Fetch payment history
+      const historyRes = await databases.listDocuments(
+        dbId,
+        paymentRecordsCollId,
+        [
+          Query.equal("userId", userId),
+          Query.orderDesc("$createdAt"),
+          Query.limit(50), // Limit to recent 50 for performance
+        ]
+      );
+      setHistory(historyRes.documents);
+      setHistoryLoading(false);
+    } catch (error) {
+      console.error("Error fetching user payments:", error);
+      setPaymentData({
+        depositAmount: 0,
+        paidAmount: 0,
+        pendingAmount: 0,
+        loading: false,
+      });
+      setHistory([]);
+      setHistoryLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (userId) {
@@ -28,44 +73,6 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
     }
   }, [userId]);
 
-  const fetchUserPayments = async () => {
-    try {
-      setPaymentData((prev) => ({ ...prev, loading: true }));
-
-      console.log("Fetching user data for userId:", userId);
-      console.log("Using collection:", usersCollId);
-
-      const response = await databases.getDocument(dbId, usersCollId, userId);
-
-      console.log("User data found:", response);
-
-      const { depositAmount = 0, paidAmount = 0, pendingAmount = 0 } = response;
-
-      console.log("Payment details:", {
-        depositAmount,
-        paidAmount,
-        pendingAmount,
-      });
-
-      setPaymentData({
-        depositAmount,
-        paidAmount,
-        pendingAmount,
-        loading: false,
-      });
-    } catch (error) {
-      console.error("Error fetching user payments:", error);
-      console.error("Error details:", error.message);
-      setPaymentData({
-        depositAmount: 0,
-        paidAmount: 0,
-        pendingAmount: 0,
-        loading: false,
-      });
-    }
-  };
-
-  // Expose fetchUserPayments to parent components
   useImperativeHandle(ref, () => ({
     refreshPayments: fetchUserPayments,
   }));
@@ -74,6 +81,16 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
     dispatch(showModal());
     dispatch(showEditPaymentModal());
   }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   if (paymentData.loading) {
     return (
@@ -117,6 +134,28 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
         heading={"pending amount"}
         value={`₹ ${paymentData.pendingAmount}`}
       />
+      <div className="mt-4">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">
+          Payment History
+        </h4>
+        {historyLoading ? (
+          <p className="text-center text-gray-500">Loading history...</p>
+        ) : history.length === 0 ? (
+          <p className="text-center text-gray-500">No payment history</p>
+        ) : (
+          <ul className="space-y-2 max-h-48 overflow-y-auto">
+            {history.map((record) => (
+              <li
+                key={record.$id}
+                className="text-xs text-gray-600 border-b pb-1"
+              >
+                {formatDate(record.date)} - ₹{record.amount} ({record.type}) via{" "}
+                {record.method}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </InfoCardOne>
   );
 });
