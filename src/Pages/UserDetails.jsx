@@ -11,10 +11,12 @@ import Tabs from "../Components/Tabs/Tabs";
 import { Avatar } from "@mui/material";
 import { deepPurple } from "@mui/material/colors";
 import UserPhoto from "../Components/UserPhoto";
+import toast from "react-hot-toast"; // For toasts
 
 const userBucketId = import.meta.env.VITE_USER_BUCKET_ID;
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
+const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
 
 function UserDetails() {
   const param = useParams();
@@ -47,23 +49,99 @@ function UserDetails() {
     getUser();
   }, [paramId]);
 
-  function handleReturnBike() {
+  // New: Calculate due amounts for alert
+  async function calculateDueAmounts() {
+    if (!userDetails?.bikeId) return { pending: 0, rent: 0 };
+
+    try {
+      const user = await databases.getDocument(
+        dbId,
+        usersCollId,
+        userDetails.$id
+      );
+      const bike = await databases.getDocument(
+        dbId,
+        bikesCollId,
+        userDetails.bikeId
+      );
+
+      const pending = parseInt(user.pendingAmount || 0);
+      let rentDue = 0;
+      const DAILY_RATE = 1700 / 7;
+
+      if (user.lastRentCollectionDate && bike.assignedAt) {
+        const lastPaymentDate = new Date(user.lastRentCollectionDate);
+        const currentDate = new Date();
+        const timeDiff = currentDate - lastPaymentDate;
+        const daysSinceLast = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        rentDue = Math.round(DAILY_RATE * daysSinceLast);
+      }
+
+      return { pending, rent: rentDue };
+    } catch (error) {
+      console.error("Error calculating dues:", error);
+      return { pending: 0, rent: 0 };
+    }
+  }
+
+  // Updated: handleReturnBike with alert
+  async function handleReturnBike() {
+    const dues = await calculateDueAmounts();
+
+    if (dues.pending > 0 || dues.rent > 0) {
+      // Show alert/prompt
+      const totalDue = dues.pending + dues.rent;
+      const daysSinceLast = Math.floor(
+        (new Date() -
+          new Date(
+            userDetails.lastRentCollectionDate ||
+              userDetails.assignedAt ||
+              new Date()
+          )) /
+          (1000 * 60 * 60 * 24)
+      );
+      const confirmMsg = `⚠️ Outstanding amounts before return:\n\n- Pending: ₹${
+        dues.pending
+      }\n- Rent Due: ₹${dues.rent} (${DAILY_RATE.toFixed(
+        2
+      )}/day for ${daysSinceLast} days)\n\nTotal: ₹${totalDue}\n\nPlease collect via Payments screen to avoid delays. Proceed without collecting?`;
+
+      if (confirm(confirmMsg)) {
+        // User chose to proceed—dispatch return
+        proceedWithReturn();
+      } else {
+        // User cancels—remind and optionally redirect
+        toast.info("Collections can be done via the Payments screen anytime.");
+        // Optional: Redirect to Payments (uncomment if wanted)
+        // window.location.href = '/payments?company=' + encodeURIComponent(userDetails.userCompany);
+      }
+    } else {
+      // No dues—proceed directly
+      proceedWithReturn();
+    }
+  }
+
+  // New: Helper to proceed with return (keeps dispatch clean)
+  function proceedWithReturn() {
     dispatch(
       returnBikeFromUser({
         userId: userDetails?.$id,
         bikeId: userDetails?.bikeId,
-        batteryId: userDetails?.batteryId,
-        totalSwapCount: 0,
+        batteryId: userDetails?.batteryId || null,
+        totalSwapCount: userDetails?.totalSwapCount || 0,
       })
     )
       .unwrap()
-      .then(() => {
-        getUser();
+      .then((result) => {
+        toast.success(
+          `Bike returned successfully! Payment cycle ended. (Final rent calc: ₹${result.finalRentDue} for ${result.daysSinceLast} days)`
+        );
+        getUser(); // Refresh user details
       })
       .catch((error) => {
         console.log("error while returning bike", error);
+        toast.error("Failed to return bike.");
       });
-    getUser();
   }
 
   if (userDetails) {
