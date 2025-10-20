@@ -42,6 +42,20 @@ const Payments = () => {
     }
   };
 
+  // *** FIXED: Calculate days inclusively (both start and end dates count) ***
+  const calculateDaysInclusive = (startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Set to start of day for both dates
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    // Calculate difference and ADD 1 to include both start and end dates
+    const daysDiff = Math.floor((end - start) / (1000 * 60 * 60 * 24));
+    return daysDiff + 1; // +1 makes it inclusive
+  };
+
   const fetchTodaysPayments = async () => {
     setLoading(true);
     try {
@@ -54,8 +68,6 @@ const Payments = () => {
         setLoading(false);
         return;
       }
-
-      console.log("Selected company:", selectedCompanyData.companyName);
 
       // Fetch users with pagination
       const limit = 100;
@@ -74,16 +86,7 @@ const Payments = () => {
         hasMore = response.documents.length === limit;
       }
 
-      console.log("Matched users:", allUsers.length);
-
-      if (allUsers.length === 0) {
-        setPayments([]);
-        setTotalAmount(0);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch bike details for users with bikes and calculate pro-rated rent
+      // Fetch bike details and calculate rent
       const userPayments = await Promise.all(
         allUsers.map(async (user) => {
           const pendingAmount = parseInt(user.pendingAmount || 0);
@@ -91,8 +94,9 @@ const Payments = () => {
 
           let daysSinceLast = 0;
           let rentDue = 0;
-          let assignedAt = null;
           let lastPaymentDate = null;
+          let cycleStartDate = null;
+          let bikeAssignedDate = null;
 
           if (hasBike) {
             try {
@@ -101,17 +105,26 @@ const Payments = () => {
                 bikesCollId,
                 user.bikeId
               );
-              assignedAt = bike.assignedAt;
-              if (assignedAt) {
-                const assignedDate = new Date(assignedAt);
-                lastPaymentDate = user.lastRentCollectionDate
-                  ? new Date(user.lastRentCollectionDate)
-                  : assignedDate;
-                const currentDate = new Date();
-                const timeDiff = currentDate - lastPaymentDate;
-                daysSinceLast = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-                rentDue = Math.round(DAILY_RATE * daysSinceLast);
-              }
+              bikeAssignedDate = bike.assignedAt;
+              const assignedDate = new Date(bike.assignedAt);
+
+              // Determine cycle start: either last rent collection or bike assignment
+              cycleStartDate = user.lastRentCollectionDate
+                ? new Date(user.lastRentCollectionDate)
+                : assignedDate;
+
+              lastPaymentDate = user.lastRentCollectionDate;
+
+              const currentDate = new Date();
+
+              // Calculate days inclusively
+              daysSinceLast = calculateDaysInclusive(
+                cycleStartDate,
+                currentDate
+              );
+
+              // Calculate rent based on daily rate
+              rentDue = Math.round(DAILY_RATE * daysSinceLast);
             } catch (error) {
               console.error(`Error fetching bike ${user.bikeId}:`, error);
             }
@@ -128,15 +141,16 @@ const Payments = () => {
             bikeId: user.bikeId || null,
             batteryId: user.batteryId || null,
             hasBike,
+            bikeAssignedDate,
             depositAmount: parseInt(user.depositAmount || 0),
             paidAmount: parseInt(user.paidAmount || 0),
             pendingAmount,
             rentDue,
             totalToCollect,
             daysSinceLast,
-            lastRentDate: user.lastRentCollectionDate || null,
-            lastCycleStart: lastPaymentDate
-              ? lastPaymentDate.toISOString()
+            lastRentDate: lastPaymentDate,
+            cycleStartDate: cycleStartDate
+              ? cycleStartDate.toISOString()
               : null,
             type: "pending",
             method: "cash",
@@ -145,12 +159,9 @@ const Payments = () => {
         })
       );
 
-      // Filter users with pending > 0 or hasBike (to include even if rentDue = 0)
       const filteredPayments = userPayments.filter(
         (payment) => payment.pendingAmount > 0 || payment.hasBike
       );
-
-      console.log("Users with payments due:", filteredPayments.length);
 
       const total = filteredPayments.reduce(
         (sum, payment) => sum + payment.totalToCollect,
@@ -180,8 +191,8 @@ const Payments = () => {
     try {
       const newPaidAmount =
         Number(payment.paidAmount) + Number(payment.pendingAmount);
+      const collectionDate = new Date().toISOString();
 
-      // Update pending to 0
       await dispatch(
         updatePayment({
           userId: payment.userId,
@@ -189,21 +200,18 @@ const Payments = () => {
         })
       ).unwrap();
 
-      // Update user document with new paid amount
       await databases.updateDocument(dbId, usersCollId, payment.userId, {
         paidAmount: newPaidAmount,
       });
 
-      // Create payment record
       await databases.createDocument(dbId, paymentRecordsCollId, "unique()", {
         userId: payment.userId,
         amount: payment.pendingAmount,
         type: "pending_clearance",
         method: "cash",
-        date: new Date().toISOString(),
+        date: collectionDate,
       });
 
-      // Update local state
       const updatedPayments = payments
         .map((p) =>
           p.$id === payment.$id
@@ -224,7 +232,6 @@ const Payments = () => {
 
       toast.success(`✅ Pending ₹${payment.pendingAmount} collected!`);
     } catch (error) {
-      console.error("Error collecting pending:", error);
       toast.error(`❌ Failed to collect pending: ${error.message}`);
     } finally {
       setCollecting((prev) => ({ ...prev, [`${payment.$id}-pending`]: false }));
@@ -237,7 +244,7 @@ const Payments = () => {
       return;
     }
 
-    const confirmMsg = `Collect rent due ₹${payment.rentDue} from ${payment.userName}?`;
+    const confirmMsg = `Collect rent ₹${payment.rentDue} from ${payment.userName}?\n\nThis will start a new rent cycle from today.`;
 
     if (!confirm(confirmMsg)) return;
 
@@ -245,23 +252,22 @@ const Payments = () => {
     try {
       const newPaidAmount =
         Number(payment.paidAmount) + Number(payment.rentDue);
+      const TODAY = new Date().toISOString();
 
-      // Update user document with new paid amount and last rent date
       await databases.updateDocument(dbId, usersCollId, payment.userId, {
         paidAmount: newPaidAmount,
-        lastRentCollectionDate: new Date().toISOString(),
+        lastRentCollectionDate: TODAY, // New cycle starts today
       });
 
-      // Create payment record
       await databases.createDocument(dbId, paymentRecordsCollId, "unique()", {
         userId: payment.userId,
         amount: payment.rentDue,
         type: "rent_collection",
         method: "cash",
-        date: new Date().toISOString(),
+        date: TODAY,
       });
 
-      // Update local state
+      // Recalculate: new cycle starts today, so it's day 1
       const updatedPayments = payments
         .map((p) =>
           p.$id === payment.$id
@@ -269,10 +275,10 @@ const Payments = () => {
                 ...p,
                 rentDue: 0,
                 paidAmount: newPaidAmount,
-                totalToCollect: p.totalToCollect - p.rentDue,
-                daysSinceLast: 0,
-                lastRentDate: new Date().toISOString(),
-                lastCycleStart: new Date().toISOString(),
+                totalToCollect: p.pendingAmount,
+                daysSinceLast: 1, // Today counts as day 1 of new cycle
+                lastRentDate: TODAY,
+                cycleStartDate: TODAY,
               }
             : p
         )
@@ -283,9 +289,10 @@ const Payments = () => {
         updatedPayments.reduce((sum, p) => sum + p.totalToCollect, 0)
       );
 
-      toast.success(`✅ Rent ₹${payment.rentDue} collected!`);
+      toast.success(
+        `✅ Rent ₹${payment.rentDue} collected! New cycle started from today.`
+      );
     } catch (error) {
-      console.error("Error collecting rent:", error);
       toast.error(`❌ Failed to collect rent: ${error.message}`);
     } finally {
       setCollecting((prev) => ({ ...prev, [`${payment.$id}-rent`]: false }));
@@ -299,13 +306,23 @@ const Payments = () => {
   };
 
   const formatDate = (dateString) => {
-    return dateString
-      ? new Date(dateString).toLocaleDateString("en-IN", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
-      : "N/A";
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   return (
@@ -317,13 +334,13 @@ const Payments = () => {
               Pending Payments Collection
             </h1>
             <p className="text-gray-600">
-              Collect pending amounts and pro-rated rent (₹1,700/week,
-              calculated per day)
+              Collect pending amounts and pro-rated rent (₹1,700/week = ₹
+              {DAILY_RATE.toFixed(2)}/day)
             </p>
           </div>
           <button
             onClick={refreshData}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 w-full sm:w-auto"
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 w-full sm:w-auto"
           >
             Refresh Data
           </button>
@@ -337,7 +354,7 @@ const Payments = () => {
         <select
           value={selectedCompany}
           onChange={(e) => setSelectedCompany(e.target.value)}
-          className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Choose a company...</option>
           {companies.map((company) => (
@@ -395,10 +412,13 @@ const Payments = () => {
                           Phone
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Cycle Start
+                          Bike Assigned
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Days Since Last Rent
+                          Current Cycle Start
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Days in Cycle
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Pending
@@ -407,7 +427,7 @@ const Payments = () => {
                           Rent Due
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total to Collect
+                          Total
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
@@ -427,7 +447,36 @@ const Payments = () => {
                             {payment.userPhone || "N/A"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(payment.lastCycleStart) || "N/A"}
+                            {payment.bikeAssignedDate ? (
+                              <span
+                                className="text-xs"
+                                title={formatDateTime(payment.bikeAssignedDate)}
+                              >
+                                {formatDate(payment.bikeAssignedDate)}
+                              </span>
+                            ) : (
+                              "N/A"
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {payment.cycleStartDate ? (
+                              <div>
+                                <div
+                                  className="text-xs"
+                                  title={formatDateTime(payment.cycleStartDate)}
+                                >
+                                  {formatDate(payment.cycleStartDate)}
+                                </div>
+                                {payment.lastRentDate && (
+                                  <div className="text-xs text-green-600">
+                                    (Last paid:{" "}
+                                    {formatDate(payment.lastRentDate)})
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              "N/A"
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             <span
@@ -437,7 +486,8 @@ const Payments = () => {
                                   : "bg-green-100 text-green-800"
                               }`}
                             >
-                              {payment.daysSinceLast} days
+                              {payment.daysSinceLast}{" "}
+                              {payment.daysSinceLast === 1 ? "day" : "days"}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -445,16 +495,16 @@ const Payments = () => {
                           </td>
                           <td
                             className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                            title={`Based on ${
+                            title={`${
                               payment.daysSinceLast
-                            } days at ₹${DAILY_RATE.toFixed(2)}/day`}
+                            } days × ₹${DAILY_RATE.toFixed(2)}/day`}
                           >
                             {payment.rentDue > 0 ? (
                               <span className="text-red-600 font-medium">
                                 ₹{payment.rentDue.toLocaleString("en-IN")}
                               </span>
                             ) : (
-                              <span className="text-gray-400">Not due</span>
+                              <span className="text-gray-400">₹0</span>
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
@@ -463,9 +513,13 @@ const Payments = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex gap-2">
                             <button
                               onClick={() => collectPending(payment)}
-                              disabled={collecting[`${payment.$id}-pending`]}
+                              disabled={
+                                collecting[`${payment.$id}-pending`] ||
+                                payment.pendingAmount <= 0
+                              }
                               className={`px-3 py-1 rounded-md text-sm font-medium ${
-                                collecting[`${payment.$id}-pending`]
+                                collecting[`${payment.$id}-pending`] ||
+                                payment.pendingAmount <= 0
                                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                                   : "bg-blue-600 text-white hover:bg-blue-700"
                               }`}
@@ -476,9 +530,13 @@ const Payments = () => {
                             </button>
                             <button
                               onClick={() => collectRent(payment)}
-                              disabled={collecting[`${payment.$id}-rent`]}
+                              disabled={
+                                collecting[`${payment.$id}-rent`] ||
+                                payment.rentDue <= 0
+                              }
                               className={`px-3 py-1 rounded-md text-sm font-medium ${
-                                collecting[`${payment.$id}-rent`]
+                                collecting[`${payment.$id}-rent`] ||
+                                payment.rentDue <= 0
                                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                                   : "bg-green-600 text-white hover:bg-green-700"
                               }`}
@@ -520,7 +578,7 @@ const Payments = () => {
                                 : "bg-green-100 text-green-800"
                             }`}
                           >
-                            {payment.daysSinceLast} days since last rent
+                            Day {payment.daysSinceLast} of cycle
                           </span>
                         </div>
                       </div>
@@ -532,57 +590,71 @@ const Payments = () => {
                     </div>
                     <div className="text-xs text-gray-600 mb-3 space-y-1">
                       <div>
-                        Pending: ₹
-                        {payment.pendingAmount.toLocaleString("en-IN")}
+                        <strong>Bike Assigned:</strong>{" "}
+                        {formatDate(payment.bikeAssignedDate)}
                       </div>
                       <div>
-                        Rent Due:{" "}
-                        {payment.rentDue > 0
-                          ? `₹${payment.rentDue.toLocaleString("en-IN")}`
-                          : "Not due"}
+                        <strong>Current Cycle Started:</strong>{" "}
+                        {formatDate(payment.cycleStartDate)}
                       </div>
-                      {payment.hasBike && (
-                        <div className="text-xs text-gray-500">
-                          Calculation: {payment.daysSinceLast} days × ₹
-                          {DAILY_RATE.toFixed(2)}/day ≈ ₹{payment.rentDue}
+                      {payment.lastRentDate && (
+                        <div className="text-green-600">
+                          <strong>Last Rent Collected:</strong>{" "}
+                          {formatDate(payment.lastRentDate)}
                         </div>
                       )}
-                      <div>
-                        Cycle started:{" "}
-                        {formatDate(payment.lastCycleStart) || "N/A"}
+                      <div className="pt-2 border-t mt-2">
+                        <div>
+                          Pending: ₹
+                          {payment.pendingAmount.toLocaleString("en-IN")}
+                        </div>
+                        <div>
+                          Rent Due: ₹{payment.rentDue.toLocaleString("en-IN")}
+                        </div>
+                        {payment.hasBike && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            ({payment.daysSinceLast} days × ₹
+                            {DAILY_RATE.toFixed(2)}/day)
+                          </div>
+                        )}
                       </div>
-                      <div>Last Rent: {formatDate(payment.lastRentDate)}</div>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => collectPending(payment)}
-                        disabled={collecting[`${payment.$id}-pending`]}
+                        disabled={
+                          collecting[`${payment.$id}-pending`] ||
+                          payment.pendingAmount <= 0
+                        }
                         className={`flex-1 px-4 py-2 rounded-md text-sm font-medium ${
-                          collecting[`${payment.$id}-pending`]
+                          collecting[`${payment.$id}-pending`] ||
+                          payment.pendingAmount <= 0
                             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                             : "bg-blue-600 text-white hover:bg-blue-700"
                         }`}
                       >
                         {collecting[`${payment.$id}-pending`]
                           ? "Collecting..."
-                          : `Collect Pending ₹${payment.pendingAmount.toLocaleString(
+                          : `Pending ₹${payment.pendingAmount.toLocaleString(
                               "en-IN"
                             )}`}
                       </button>
                       <button
                         onClick={() => collectRent(payment)}
-                        disabled={collecting[`${payment.$id}-rent`]}
+                        disabled={
+                          collecting[`${payment.$id}-rent`] ||
+                          payment.rentDue <= 0
+                        }
                         className={`flex-1 px-4 py-2 rounded-md text-sm font-medium ${
-                          collecting[`${payment.$id}-rent`]
+                          collecting[`${payment.$id}-rent`] ||
+                          payment.rentDue <= 0
                             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                             : "bg-green-600 text-white hover:bg-green-700"
                         }`}
                       >
                         {collecting[`${payment.$id}-rent`]
                           ? "Collecting..."
-                          : `Collect Rent ₹${payment.rentDue.toLocaleString(
-                              "en-IN"
-                            )}`}
+                          : `Rent ₹${payment.rentDue.toLocaleString("en-IN")}`}
                       </button>
                     </div>
                   </div>

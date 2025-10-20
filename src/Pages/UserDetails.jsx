@@ -49,9 +49,9 @@ function UserDetails() {
     getUser();
   }, [paramId]);
 
-  // New: Calculate due amounts for alert
+  // *** FIXED: Calculate due amounts for alert (Full calendar days) ***
   async function calculateDueAmounts() {
-    if (!userDetails?.bikeId) return { pending: 0, rent: 0 };
+    if (!userDetails?.bikeId) return { pending: 0, rent: 0, daysSinceLast: 0 };
 
     try {
       const user = await databases.getDocument(
@@ -67,44 +67,39 @@ function UserDetails() {
 
       const pending = parseInt(user.pendingAmount || 0);
       let rentDue = 0;
+      let daysSinceLast = 0;
       const DAILY_RATE = 1700 / 7;
 
       if (user.lastRentCollectionDate && bike.assignedAt) {
         const lastPaymentDate = new Date(user.lastRentCollectionDate);
         const currentDate = new Date();
-        const timeDiff = currentDate - lastPaymentDate;
-        const daysSinceLast = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+        // *** FIXED: Full calendar days (each day = 1) ***
+        const timeDiff = currentDate.getTime() - lastPaymentDate.getTime();
+        daysSinceLast = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
         rentDue = Math.round(DAILY_RATE * daysSinceLast);
       }
 
-      return { pending, rent: rentDue };
+      return { pending, rent: rentDue, daysSinceLast };
     } catch (error) {
       console.error("Error calculating dues:", error);
-      return { pending: 0, rent: 0 };
+      return { pending: 0, rent: 0, daysSinceLast: 0 };
     }
   }
 
   // Updated: handleReturnBike with alert
   async function handleReturnBike() {
     const dues = await calculateDueAmounts();
+    const DAILY_RATE = 1700 / 7;
 
     if (dues.pending > 0 || dues.rent > 0) {
       // Show alert/prompt
       const totalDue = dues.pending + dues.rent;
-      const daysSinceLast = Math.floor(
-        (new Date() -
-          new Date(
-            userDetails.lastRentCollectionDate ||
-              userDetails.assignedAt ||
-              new Date()
-          )) /
-          (1000 * 60 * 60 * 24)
-      );
       const confirmMsg = `⚠️ Outstanding amounts before return:\n\n- Pending: ₹${
         dues.pending
-      }\n- Rent Due: ₹${dues.rent} (${DAILY_RATE.toFixed(
-        2
-      )}/day for ${daysSinceLast} days)\n\nTotal: ₹${totalDue}\n\nPlease collect via Payments screen to avoid delays. Proceed without collecting?`;
+      }\n- Rent Due: ₹${dues.rent} (${DAILY_RATE.toFixed(2)}/day for ${
+        dues.daysSinceLast
+      } calendar days)\n\nTotal: ₹${totalDue}\n\nPlease collect via Payments screen to avoid delays. Proceed without collecting?`;
 
       if (confirm(confirmMsg)) {
         // User chose to proceed—dispatch return
