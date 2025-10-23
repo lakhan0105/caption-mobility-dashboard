@@ -21,6 +21,12 @@ const Payments = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [collecting, setCollecting] = useState({});
 
+  // === NEW: Payment Modal States ===
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentPayment, setCurrentPayment] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [utrInput, setUtrInput] = useState("");
+
   const DAILY_RATE = 1700 / 7;
 
   useEffect(() => {
@@ -177,126 +183,31 @@ const Payments = () => {
     }
   };
 
-  const collectPending = async (payment) => {
+  // === UPDATED: Open modal instead of direct collect ===
+  const collectPending = (payment) => {
     if (payment.pendingAmount <= 0) {
       toast.error("No pending amount.");
       return;
     }
-
-    const confirmMsg = `Collect pending ₹${payment.pendingAmount} from ${payment.userName}?`;
-
-    if (!confirm(confirmMsg)) return;
-
-    setCollecting((prev) => ({ ...prev, [`${payment.$id}-pending`]: true }));
-    try {
-      const newPaidAmount =
-        Number(payment.paidAmount) + Number(payment.pendingAmount);
-      const collectionDate = new Date().toISOString();
-
-      await dispatch(
-        updatePayment({
-          userId: payment.userId,
-          pendingAmount: 0,
-        })
-      ).unwrap();
-
-      await databases.updateDocument(dbId, usersCollId, payment.userId, {
-        paidAmount: newPaidAmount,
-      });
-
-      await databases.createDocument(dbId, paymentRecordsCollId, "unique()", {
-        userId: payment.userId,
-        amount: payment.pendingAmount,
-        type: "pending_clearance",
-        method: "cash",
-        date: collectionDate,
-      });
-
-      const updatedPayments = payments
-        .map((p) =>
-          p.$id === payment.$id
-            ? {
-                ...p,
-                pendingAmount: 0,
-                paidAmount: newPaidAmount,
-                totalToCollect: p.totalToCollect - p.pendingAmount,
-              }
-            : p
-        )
-        .filter((p) => p.pendingAmount > 0 || p.hasBike);
-
-      setPayments(updatedPayments);
-      setTotalAmount(
-        updatedPayments.reduce((sum, p) => sum + p.totalToCollect, 0)
-      );
-
-      toast.success(`✅ Pending ₹${payment.pendingAmount} collected!`);
-    } catch (error) {
-      toast.error(`❌ Failed to collect pending: ${error.message}`);
-    } finally {
-      setCollecting((prev) => ({ ...prev, [`${payment.$id}-pending`]: false }));
-    }
+    setCurrentPayment({
+      ...payment,
+      type: "pending",
+      amount: payment.pendingAmount,
+    });
+    setShowPaymentModal(true);
   };
 
-  const collectRent = async (payment) => {
+  const collectRent = (payment) => {
     if (payment.rentDue <= 0) {
       toast.error("No rent due at this time.");
       return;
     }
-
-    const confirmMsg = `Collect rent ₹${payment.rentDue} from ${payment.userName}?\n\nThis will start a new rent cycle from today.`;
-
-    if (!confirm(confirmMsg)) return;
-
-    setCollecting((prev) => ({ ...prev, [`${payment.$id}-rent`]: true }));
-    try {
-      const newPaidAmount =
-        Number(payment.paidAmount) + Number(payment.rentDue);
-      const TODAY = new Date().toISOString();
-
-      await databases.updateDocument(dbId, usersCollId, payment.userId, {
-        paidAmount: newPaidAmount,
-        lastRentCollectionDate: TODAY, // New cycle starts today
-      });
-
-      await databases.createDocument(dbId, paymentRecordsCollId, "unique()", {
-        userId: payment.userId,
-        amount: payment.rentDue,
-        type: "rent_collection",
-        method: "cash",
-        date: TODAY,
-      });
-
-      // Recalculate: new cycle starts today, so it's day 1
-      const updatedPayments = payments
-        .map((p) =>
-          p.$id === payment.$id
-            ? {
-                ...p,
-                rentDue: 0,
-                paidAmount: newPaidAmount,
-                totalToCollect: p.pendingAmount,
-                daysSinceLast: 1, // Today counts as day 1 of new cycle
-                lastRentDate: TODAY,
-                cycleStartDate: TODAY,
-              }
-            : p
-        )
-        .filter((p) => p.pendingAmount > 0 || p.hasBike);
-
-      setPayments(updatedPayments);
-      setTotalAmount(
-        updatedPayments.reduce((sum, p) => sum + p.totalToCollect, 0)
-      );
-
-      toast.success(
-        `✅ Rent ₹${payment.rentDue} collected! New cycle started from today.`
-      );
-    } catch (error) {
-      toast.error(`❌ Failed to collect rent: ${error.message}`);
-    } finally {
-      setCollecting((prev) => ({ ...prev, [`${payment.$id}-rent`]: false }));
-    }
+    setCurrentPayment({
+      ...payment,
+      type: "rent",
+      amount: payment.rentDue,
+    });
+    setShowPaymentModal(true);
   };
 
   const refreshData = () => {
@@ -392,7 +303,7 @@ const Payments = () => {
               <p className="mt-2 text-gray-600">Loading payments...</p>
             </div>
           ) : payments.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <div class="text-center py-8 bg-gray-50 rounded-lg">
               <p className="text-gray-600">No users for this company</p>
             </div>
           ) : (
@@ -661,6 +572,175 @@ const Payments = () => {
                 ))}
               </div>
             </>
+          )}
+
+          {/* === PAYMENT MODAL === */}
+          {showPaymentModal && currentPayment && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h3 className="text-lg font-semibold mb-4">
+                  Collect {currentPayment.type === "rent" ? "Rent" : "Pending"}{" "}
+                  from {currentPayment.userName}
+                </h3>
+                <p className="text-2xl font-bold text-green-600 mb-4">
+                  ₹{currentPayment.amount.toLocaleString("en-IN")}
+                </p>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="online">Online (UPI/Bank)</option>
+                  </select>
+                </div>
+
+                {paymentMethod === "online" && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      UTR / Reference Number{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={utrInput}
+                      onChange={(e) => setUtrInput(e.target.value)}
+                      placeholder="e.g. 123456789012"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (paymentMethod === "online" && !utrInput.trim()) {
+                        toast.error("UTR is required for online payment");
+                        return;
+                      }
+
+                      setCollecting((prev) => ({
+                        ...prev,
+                        [`${currentPayment.$id}-${currentPayment.type}`]: true,
+                      }));
+
+                      try {
+                        const newPaidAmount =
+                          Number(currentPayment.paidAmount) +
+                          Number(currentPayment.amount);
+                        const TODAY = new Date().toISOString();
+
+                        // Update user
+                        await databases.updateDocument(
+                          dbId,
+                          usersCollId,
+                          currentPayment.userId,
+                          {
+                            paidAmount: newPaidAmount,
+                            ...(currentPayment.type === "rent" && {
+                              lastRentCollectionDate: TODAY,
+                            }),
+                          }
+                        );
+
+                        // Create payment record
+                        await databases.createDocument(
+                          dbId,
+                          paymentRecordsCollId,
+                          "unique()",
+                          {
+                            userId: currentPayment.userId,
+                            amount: currentPayment.amount,
+                            type:
+                              currentPayment.type === "rent"
+                                ? "rent_collection"
+                                : "pending_clearance",
+                            method: paymentMethod,
+                            utrNumber:
+                              paymentMethod === "online"
+                                ? utrInput.trim()
+                                : null,
+                            date: TODAY,
+                          }
+                        );
+
+                        // Update UI
+                        const fieldToReset =
+                          currentPayment.type === "rent"
+                            ? "rentDue"
+                            : "pendingAmount";
+                        const updatedPayments = payments
+                          .map((p) =>
+                            p.$id === currentPayment.$id
+                              ? {
+                                  ...p,
+                                  [fieldToReset]: 0,
+                                  paidAmount: newPaidAmount,
+                                  totalToCollect:
+                                    p.totalToCollect - currentPayment.amount,
+                                  ...(currentPayment.type === "rent" && {
+                                    daysSinceLast: 1,
+                                    lastRentDate: TODAY,
+                                    cycleStartDate: TODAY,
+                                  }),
+                                }
+                              : p
+                          )
+                          .filter((p) => p.pendingAmount > 0 || p.hasBike);
+
+                        setPayments(updatedPayments);
+                        setTotalAmount(
+                          updatedPayments.reduce(
+                            (sum, p) => sum + p.totalToCollect,
+                            0
+                          )
+                        );
+
+                        toast.success(
+                          `Collected ₹${
+                            currentPayment.amount
+                          } via ${paymentMethod.toUpperCase()}!`
+                        );
+                      } catch (error) {
+                        toast.error(`Failed: ${error.message}`);
+                      } finally {
+                        setCollecting((prev) => ({
+                          ...prev,
+                          [`${currentPayment.$id}-${currentPayment.type}`]: false,
+                        }));
+                        setShowPaymentModal(false);
+                        setUtrInput("");
+                        setPaymentMethod("cash");
+                      }
+                    }}
+                    disabled={
+                      collecting[`${currentPayment.$id}-${currentPayment.type}`]
+                    }
+                    className="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    {collecting[`${currentPayment.$id}-${currentPayment.type}`]
+                      ? "Processing..."
+                      : "Confirm & Collect"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      setUtrInput("");
+                      setPaymentMethod("cash");
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </>
       )}

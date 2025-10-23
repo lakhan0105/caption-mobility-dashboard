@@ -149,8 +149,15 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
                 key={record.$id}
                 className="text-xs text-gray-600 border-b pb-1"
               >
-                {formatDate(record.date)} - ₹{record.amount} ({record.type}) via{" "}
-                {record.method}
+                <div>
+                  {formatDate(record.date)} - ₹{record.amount} ({record.type})
+                  via {record.method}
+                </div>
+                {record.utrNumber && (
+                  <div className="text-xs text-blue-600 font-medium mt-1">
+                    UTR: {record.utrNumber}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
