@@ -31,18 +31,7 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
       setPaymentData((prev) => ({ ...prev, loading: true }));
       setHistoryLoading(true);
 
-      // Fetch user data
-      const response = await databases.getDocument(dbId, usersCollId, userId);
-      const { depositAmount = 0, paidAmount = 0, pendingAmount = 0 } = response;
-
-      setPaymentData({
-        depositAmount,
-        paidAmount,
-        pendingAmount,
-        loading: false,
-      });
-
-      // Fetch payment history
+      // Fetch payment history from paymentRecordsCollId
       const historyRes = await databases.listDocuments(
         dbId,
         paymentRecordsCollId,
@@ -52,6 +41,36 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
           Query.limit(50), // Limit to recent 50 for performance
         ]
       );
+
+      // Calculate amounts from payment records
+      let depositAmount = 0;
+      let paidAmount = 0;
+      let pendingAmount = 0;
+
+      historyRes.documents.forEach((payment) => {
+        const amount = payment.amount || 0;
+        switch (payment.type) {
+          case "deposit":
+            depositAmount += amount;
+            break;
+          case "rent_collection": // Match Payments.jsx types
+          case "pending_clearance":
+            paidAmount += amount;
+            break;
+          case "pending":
+            pendingAmount += amount;
+            break;
+          default:
+            break;
+        }
+      });
+
+      setPaymentData({
+        depositAmount,
+        paidAmount,
+        pendingAmount,
+        loading: false,
+      });
       setHistory(historyRes.documents);
       setHistoryLoading(false);
     } catch (error) {
@@ -124,15 +143,15 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
     >
       <InfoCardRow
         heading={"deposit amount"}
-        value={`₹ ${paymentData.depositAmount}`}
+        value={`₹ ${paymentData.depositAmount.toLocaleString("en-IN")}`}
       />
       <InfoCardRow
         heading={"paid amount"}
-        value={`₹ ${paymentData.paidAmount}`}
+        value={`₹ ${paymentData.paidAmount.toLocaleString("en-IN")}`}
       />
       <InfoCardRow
         heading={"pending amount"}
-        value={`₹ ${paymentData.pendingAmount}`}
+        value={`₹ ${paymentData.pendingAmount.toLocaleString("en-IN")}`}
       />
       <div className="mt-4">
         <h4 className="text-sm font-medium text-gray-700 mb-2">
@@ -150,8 +169,9 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
                 className="text-xs text-gray-600 border-b pb-1"
               >
                 <div>
-                  {formatDate(record.date)} - ₹{record.amount} ({record.type})
-                  via {record.method}
+                  {formatDate(record.date)} - ₹
+                  {record.amount.toLocaleString("en-IN")} ({record.type}) via{" "}
+                  {record.method}
                 </div>
                 {record.utrNumber && (
                   <div className="text-xs text-blue-600 font-medium mt-1">
