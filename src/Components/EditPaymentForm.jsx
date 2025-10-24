@@ -4,7 +4,7 @@ import { closeModal } from "../features/modal/modalSlice";
 import InputRow from "./InputRow";
 import SubmitBtn from "./Buttons/SubmitBtn";
 import { databases } from "../appwrite";
-import { Query, ID } from "appwrite";
+import { ID } from "appwrite";
 import toast from "react-hot-toast";
 
 function EditPaymentForm({
@@ -43,7 +43,7 @@ function EditPaymentForm({
     paidUtr: "",
   });
 
-  const [loading, setLoading] = useState(false); // Add loading state for button
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -55,39 +55,14 @@ function EditPaymentForm({
     try {
       setPaymentData((prev) => ({ ...prev, loading: true }));
 
-      const response = await databases.listDocuments(
-        dbId,
-        paymentRecordsCollId,
-        [Query.equal("userId", userId)]
-      );
-
-      let depositAmount = 0;
-      let paidAmount = 0;
-      let pendingAmount = 0;
-
-      response.documents.forEach((payment) => {
-        const amount = payment.amount || 0;
-
-        switch (payment.type) {
-          case "deposit":
-            depositAmount += amount;
-            break;
-          case "rent_collection":
-          case "pending_clearance":
-            paidAmount += amount;
-            break;
-          case "pending":
-            pendingAmount += amount;
-            break;
-          default:
-            break;
-        }
-      });
+      // Fetch from usersCollId
+      const response = await databases.getDocument(dbId, usersCollId, userId);
+      const { depositAmount = 0, paidAmount = 0, pendingAmount = 0 } = response;
 
       const calculatedData = {
-        depositAmount,
-        paidAmount,
-        pendingAmount,
+        depositAmount: parseInt(depositAmount) || 0,
+        paidAmount: parseInt(paidAmount) || 0,
+        pendingAmount: parseInt(pendingAmount) || 0,
         loading: false,
       };
 
@@ -138,7 +113,6 @@ function EditPaymentForm({
       return;
     }
 
-    // Validate UTR for online payments
     if (
       (paymentMethods.depositMethod === "online" &&
         newAmountDetails.depositAmount > 0 &&
@@ -152,28 +126,28 @@ function EditPaymentForm({
     }
 
     try {
-      setLoading(true); // Set loading to true when submission starts
+      setLoading(true);
 
       const currentDate = new Date().toISOString();
 
-      const existingRecords = await databases.listDocuments(
-        dbId,
-        paymentRecordsCollId,
-        [Query.equal("userId", userId)]
-      );
+      // Update usersCollId with new amounts
+      await databases.updateDocument(dbId, usersCollId, userId, {
+        depositAmount: parseInt(newAmountDetails.depositAmount) || 0,
+        paidAmount: parseInt(newAmountDetails.paidAmount) || 0,
+        pendingAmount: parseInt(newAmountDetails.pendingAmount) || 0,
+      });
 
-      for (const record of existingRecords.documents) {
-        await databases.deleteDocument(dbId, paymentRecordsCollId, record.$id);
-      }
-
-      if (newAmountDetails.depositAmount > 0) {
+      // Log changes to paymentRecordsCollId
+      if (newAmountDetails.depositAmount !== paymentData.depositAmount) {
         await databases.createDocument(
           dbId,
           paymentRecordsCollId,
           ID.unique(),
           {
             userId,
-            amount: newAmountDetails.depositAmount,
+            amount: Math.abs(
+              newAmountDetails.depositAmount - paymentData.depositAmount
+            ),
             type: "deposit",
             method: paymentMethods.depositMethod,
             utrNumber:
@@ -185,14 +159,16 @@ function EditPaymentForm({
         );
       }
 
-      if (newAmountDetails.paidAmount > 0) {
+      if (newAmountDetails.paidAmount !== paymentData.paidAmount) {
         await databases.createDocument(
           dbId,
           paymentRecordsCollId,
           ID.unique(),
           {
             userId,
-            amount: newAmountDetails.paidAmount,
+            amount: Math.abs(
+              newAmountDetails.paidAmount - paymentData.paidAmount
+            ),
             type: "rent_collection",
             method: paymentMethods.paidMethod,
             utrNumber:
@@ -204,25 +180,23 @@ function EditPaymentForm({
         );
       }
 
-      if (newAmountDetails.pendingAmount > 0) {
+      if (newAmountDetails.pendingAmount !== paymentData.pendingAmount) {
         await databases.createDocument(
           dbId,
           paymentRecordsCollId,
           ID.unique(),
           {
             userId,
-            amount: newAmountDetails.pendingAmount,
+            amount: Math.abs(
+              newAmountDetails.pendingAmount - paymentData.pendingAmount
+            ),
             type: "pending",
-            method: "cash", // Pending is always cash
+            method: "cash",
             utrNumber: null,
             date: currentDate,
           }
         );
       }
-
-      await databases.updateDocument(dbId, usersCollId, userId, {
-        pendingAmount: parseInt(newAmountDetails.pendingAmount) || 0,
-      });
 
       toast.success("Payment updated successfully!");
 
@@ -236,7 +210,7 @@ function EditPaymentForm({
       console.error("Error updating payment:", error);
       toast.error("Failed to update payment");
     } finally {
-      setLoading(false); // Reset loading state when submission completes
+      setLoading(false);
     }
   }
 
@@ -358,18 +332,23 @@ function EditPaymentForm({
         )}
       </div>
 
-      <InputRow
-        name={"pendingAmount"}
-        type={"number"}
-        label={"Edit pending payment"}
-        value={newAmountDetails.pendingAmount}
-        handleChange={handleChange}
-      />
+      <div>
+        <InputRow
+          name={"pendingAmount"}
+          type={"number"}
+          label={"Edit pending payment"}
+          value={newAmountDetails.pendingAmount}
+          handleChange={handleChange}
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          This is the amount paid at the beginning
+        </p>
+      </div>
 
       <SubmitBtn
         text={"Update Payment"}
         handleSubmit={handleEdit}
-        loading={loading} // Pass loading state to SubmitBtn
+        loading={loading}
       />
     </div>
   );
