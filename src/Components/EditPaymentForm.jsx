@@ -38,6 +38,11 @@ function EditPaymentForm({
     paidMethod: "cash",
   });
 
+  const [utrInputs, setUtrInputs] = useState({
+    depositUtr: "",
+    paidUtr: "",
+  });
+
   const [loading, setLoading] = useState(false); // Add loading state for button
 
   useEffect(() => {
@@ -67,8 +72,8 @@ function EditPaymentForm({
           case "deposit":
             depositAmount += amount;
             break;
-          case "rent":
-          case "collected":
+          case "rent_collection":
+          case "pending_clearance":
             paidAmount += amount;
             break;
           case "pending":
@@ -118,6 +123,11 @@ function EditPaymentForm({
     setPaymentMethods((prev) => ({ ...prev, [name]: value }));
   }
 
+  function handleUtrChange(e) {
+    const { name, value } = e.target;
+    setUtrInputs((prev) => ({ ...prev, [name]: value }));
+  }
+
   async function handleEdit() {
     if (
       newAmountDetails?.pendingAmount === "" ||
@@ -125,6 +135,19 @@ function EditPaymentForm({
       newAmountDetails?.depositAmount < 0
     ) {
       toast.error("Please enter valid amounts!");
+      return;
+    }
+
+    // Validate UTR for online payments
+    if (
+      (paymentMethods.depositMethod === "online" &&
+        newAmountDetails.depositAmount > 0 &&
+        !utrInputs.depositUtr.trim()) ||
+      (paymentMethods.paidMethod === "online" &&
+        newAmountDetails.paidAmount > 0 &&
+        !utrInputs.paidUtr.trim())
+    ) {
+      toast.error("UTR is required for online payments");
       return;
     }
 
@@ -153,6 +176,10 @@ function EditPaymentForm({
             amount: newAmountDetails.depositAmount,
             type: "deposit",
             method: paymentMethods.depositMethod,
+            utrNumber:
+              paymentMethods.depositMethod === "online"
+                ? utrInputs.depositUtr.trim()
+                : null,
             date: currentDate,
           }
         );
@@ -166,8 +193,12 @@ function EditPaymentForm({
           {
             userId,
             amount: newAmountDetails.paidAmount,
-            type: "rent",
+            type: "rent_collection",
             method: paymentMethods.paidMethod,
+            utrNumber:
+              paymentMethods.paidMethod === "online"
+                ? utrInputs.paidUtr.trim()
+                : null,
             date: currentDate,
           }
         );
@@ -182,7 +213,8 @@ function EditPaymentForm({
             userId,
             amount: newAmountDetails.pendingAmount,
             type: "pending",
-            method: "cash",
+            method: "cash", // Pending is always cash
+            utrNumber: null,
             date: currentDate,
           }
         );
@@ -269,6 +301,22 @@ function EditPaymentForm({
           <option value="cash">Cash</option>
           <option value="online">Online</option>
         </select>
+        {paymentMethods.depositMethod === "online" && (
+          <div className="mt-2">
+            <label htmlFor="depositUtr" className="text-sm text-gray-600 block">
+              UTR / Reference Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="depositUtr"
+              id="depositUtr"
+              value={utrInputs.depositUtr}
+              onChange={handleUtrChange}
+              placeholder="e.g. 123456789012"
+              className="border rounded text-sm block w-full mt-1 p-2"
+            />
+          </div>
+        )}
       </div>
 
       <div>
@@ -292,6 +340,22 @@ function EditPaymentForm({
           <option value="cash">Cash</option>
           <option value="online">Online</option>
         </select>
+        {paymentMethods.paidMethod === "online" && (
+          <div className="mt-2">
+            <label htmlFor="paidUtr" className="text-sm text-gray-600 block">
+              UTR / Reference Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="paidUtr"
+              id="paidUtr"
+              value={utrInputs.paidUtr}
+              onChange={handleUtrChange}
+              placeholder="e.g. 123456789012"
+              className="border rounded text-sm block w-full mt-1 p-2"
+            />
+          </div>
+        )}
       </div>
 
       <InputRow
