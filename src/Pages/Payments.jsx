@@ -21,7 +21,7 @@ const Payments = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [collecting, setCollecting] = useState({});
 
-  // === NEW: Payment Modal States ===
+  // Payment Modal States
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [currentPayment, setCurrentPayment] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -45,21 +45,17 @@ const Payments = () => {
       setCompanies(response.documents);
     } catch (error) {
       console.error("Error fetching companies:", error);
+      toast.error("Failed to load companies");
     }
   };
 
-  // *** FIXED: Calculate days inclusively (both start and end dates count) ***
   const calculateDaysInclusive = (startDate, endDate) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-
-    // Set to start of day for both dates
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
-
-    // Calculate difference and ADD 1 to include both start and end dates
     const daysDiff = Math.floor((end - start) / (1000 * 60 * 60 * 24));
-    return daysDiff + 1; // +1 makes it inclusive
+    return daysDiff + 1; // Inclusive counting
   };
 
   const fetchTodaysPayments = async () => {
@@ -148,8 +144,6 @@ const Payments = () => {
             batteryId: user.batteryId || null,
             hasBike,
             bikeAssignedDate,
-            depositAmount: parseInt(user.depositAmount || 0),
-            paidAmount: parseInt(user.paidAmount || 0),
             pendingAmount,
             rentDue,
             totalToCollect,
@@ -158,9 +152,6 @@ const Payments = () => {
             cycleStartDate: cycleStartDate
               ? cycleStartDate.toISOString()
               : null,
-            type: "pending",
-            method: "cash",
-            date: new Date().toISOString(),
           };
         })
       );
@@ -178,12 +169,12 @@ const Payments = () => {
       setTotalAmount(total);
     } catch (error) {
       console.error("Error fetching payments:", error);
+      toast.error("Failed to load payments");
     } finally {
       setLoading(false);
     }
   };
 
-  // === UPDATED: Open modal instead of direct collect ===
   const collectPending = (payment) => {
     if (payment.pendingAmount <= 0) {
       toast.error("No pending amount.");
@@ -303,7 +294,7 @@ const Payments = () => {
               <p className="mt-2 text-gray-600">Loading payments...</p>
             </div>
           ) : payments.length === 0 ? (
-            <div class="text-center py-8 bg-gray-50 rounded-lg">
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
               <p className="text-gray-600">No users for this company</p>
             </div>
           ) : (
@@ -574,7 +565,7 @@ const Payments = () => {
             </>
           )}
 
-          {/* === PAYMENT MODAL === */}
+          {/* Payment Modal */}
           {showPaymentModal && currentPayment && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg p-6 max-w-sm w-full">
@@ -631,25 +622,29 @@ const Payments = () => {
                       }));
 
                       try {
-                        const newPaidAmount =
-                          Number(currentPayment.paidAmount) +
-                          Number(currentPayment.amount);
-                        const TODAY = new Date().toISOString();
+                        const TODAY = new Date();
+                        // Set to tomorrow for rent collection
+                        const TOMORROW = new Date(TODAY);
+                        TOMORROW.setDate(TODAY.getDate() + 1);
+                        TOMORROW.setHours(0, 0, 0, 0);
 
-                        // Update user
+                        // Update user in usersCollId
                         await databases.updateDocument(
                           dbId,
                           usersCollId,
                           currentPayment.userId,
                           {
-                            paidAmount: newPaidAmount,
+                            pendingAmount:
+                              currentPayment.type === "pending"
+                                ? 0
+                                : currentPayment.pendingAmount,
                             ...(currentPayment.type === "rent" && {
-                              lastRentCollectionDate: TODAY,
+                              lastRentCollectionDate: TOMORROW.toISOString(),
                             }),
                           }
                         );
 
-                        // Create payment record
+                        // Create payment record in paymentRecordsCollId
                         await databases.createDocument(
                           dbId,
                           paymentRecordsCollId,
@@ -666,7 +661,7 @@ const Payments = () => {
                               paymentMethod === "online"
                                 ? utrInput.trim()
                                 : null,
-                            date: TODAY,
+                            date: TODAY.toISOString(),
                           }
                         );
 
@@ -681,13 +676,12 @@ const Payments = () => {
                               ? {
                                   ...p,
                                   [fieldToReset]: 0,
-                                  paidAmount: newPaidAmount,
                                   totalToCollect:
                                     p.totalToCollect - currentPayment.amount,
                                   ...(currentPayment.type === "rent" && {
-                                    daysSinceLast: 1,
-                                    lastRentDate: TODAY,
-                                    cycleStartDate: TODAY,
+                                    daysSinceLast: 0,
+                                    lastRentDate: TOMORROW.toISOString(),
+                                    cycleStartDate: TOMORROW.toISOString(),
                                   }),
                                 }
                               : p
