@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import InfoCardOne from "../InfoCardOne";
 import { MdOutlinePayment } from "react-icons/md";
 import { FaRegEdit } from "react-icons/fa";
@@ -31,7 +31,7 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
       setPaymentData((prev) => ({ ...prev, loading: true }));
       setHistoryLoading(true);
 
-      // Fetch user data from usersCollId
+      // Fetch user
       const response = await databases.getDocument(dbId, usersCollId, userId);
       const { depositAmount = 0, paidAmount = 0, pendingAmount = 0 } = response;
 
@@ -42,14 +42,14 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
         loading: false,
       });
 
-      // Fetch payment history from paymentRecordsCollId
+      // Fetch history
       const historyRes = await databases.listDocuments(
         dbId,
         paymentRecordsCollId,
         [
           Query.equal("userId", userId),
           Query.orderDesc("$createdAt"),
-          Query.limit(50), // Limit to recent 50 for performance
+          Query.limit(50),
         ]
       );
       setHistory(historyRes.documents);
@@ -77,18 +77,25 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
     refreshPayments: fetchUserPayments,
   }));
 
-  function showEditModal() {
+  const showEditModal = () => {
     dispatch(showModal());
     dispatch(showEditPaymentModal());
-  }
+  };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString("en-IN", {
+  // FIXED: Proper IST time display (no double offset)
+  const formatDateIST = (dateString) => {
+    if (!dateString) return "N/A";
+
+    const date = new Date(dateString); // Appwrite date is already UTC ISO
+
+    return date.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -137,7 +144,7 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
       />
       <div className="mt-4">
         <h4 className="text-sm font-medium text-gray-700 mb-2">
-          Payment History
+          Payment History (IST)
         </h4>
         {historyLoading ? (
           <p className="text-center text-gray-500">Loading history...</p>
@@ -151,7 +158,7 @@ const UserPaymentDetails = forwardRef(({ userId }, ref) => {
                 className="text-xs text-gray-600 border-b pb-1"
               >
                 <div>
-                  {formatDate(record.date)} - ₹
+                  {formatDateIST(record.date)} - ₹
                   {record.amount.toLocaleString("en-IN")} ({record.type}) via{" "}
                   {record.method}
                 </div>
