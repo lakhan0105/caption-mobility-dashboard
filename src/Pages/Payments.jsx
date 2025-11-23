@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { databases } from "../appwrite";
 import { Query, ID } from "appwrite";
 import toast from "react-hot-toast";
@@ -7,14 +7,17 @@ const Payments = () => {
   const dbId = import.meta.env.VITE_DB_ID;
   const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
   const companyCollId = import.meta.env.VITE_COMPANY_COLL_ID;
-  const bikesCollId = import.meta.env.VITE_BIKES_COLL_ID;
   const paymentRecordsCollId = import.meta.env.VITE_PAYMENT_RECORDS_COLL_ID;
 
   const [payments, setPayments] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState("");
   const [loading, setLoading] = useState(false);
-  const [totalAmount, setTotalAmount] = useState(0);
+  const [totalAmount, setTotalAmount] = useState({
+    rent: 0,
+    pending: 0,
+    total: 0,
+  });
   const [collecting, setCollecting] = useState({});
 
   // Modal
@@ -25,20 +28,17 @@ const Payments = () => {
 
   const WEEKLY_RENT = 1700;
 
-  // Get current IST date (YYYY-MM-DD format)
+  // IST helpers - cleaner implementation
   const getISTDate = () => {
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-    const istTime = new Date(now.getTime() + istOffset);
-    return istTime.toISOString().slice(0, 10);
+    return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
   };
 
-  // Get full IST timestamp
   const getISTTimestamp = () => {
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istTime = new Date(now.getTime() + istOffset);
-    return istTime.toISOString();
+    return (
+      new Date()
+        .toLocaleString("sv", { timeZone: "Asia/Kolkata" })
+        .replace(" ", "T") + "Z"
+    );
   };
 
   useEffect(() => {
@@ -46,7 +46,10 @@ const Payments = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedCompany) fetchWeeklyRent();
+    if (selectedCompany) {
+      setPayments([]);
+      fetchWeeklyRent();
+    }
   }, [selectedCompany]);
 
   const fetchCompanies = async () => {
@@ -64,33 +67,34 @@ const Payments = () => {
       const company = companies.find((c) => c.$id === selectedCompany);
       if (!company) {
         setPayments([]);
-        setTotalAmount(0);
+        setTotalAmount({ rent: 0, pending: 0, total: 0 });
         setLoading(false);
         return;
       }
 
-      // 1. Get all active users with bike
+      const todayIST = getISTDate();
+
+      // ✅ API CALL #1: Get ALL active users with bikes in ONE query
+      // No need to check each bike individually!
       const usersRes = await databases.listDocuments(dbId, usersCollId, [
         Query.equal("userCompany", company.companyName),
         Query.equal("userStatus", true),
         Query.isNotNull("bikeId"),
+        Query.limit(500), // Adjust based on your needs
       ]);
 
       if (usersRes.documents.length === 0) {
         setPayments([]);
-        setTotalAmount(0);
+        setTotalAmount({ rent: 0, pending: 0, total: 0 });
         setLoading(false);
         return;
       }
 
       const userIds = usersRes.documents.map((u) => u.$id);
-      const todayIST = getISTDate();
 
-      // 2. Check which users have rent collected today
-      const collectedRentToday = await databases.listDocuments(
-        dbId,
-        paymentRecordsCollId,
-        [
+      // ✅ API CALL #2 & #3: Get rent status for ALL users in TWO parallel queries
+      const [collectedRentRes, pendingRentRes] = await Promise.all([
+        databases.listDocuments(dbId, paymentRecordsCollId, [
           Query.equal("userId", userIds),
           Query.equal("type", "rent"),
           Query.or([
@@ -98,51 +102,33 @@ const Payments = () => {
             Query.equal("method", "online"),
           ]),
           Query.startsWith("date", todayIST),
-        ]
-      );
-
-      const usersWithCollectedRent = new Set(
-        collectedRentToday.documents.map((d) => d.userId)
-      );
-
-      // 3. Get pending rent records for today
-      const pendingRentToday = await databases.listDocuments(
-        dbId,
-        paymentRecordsCollId,
-        [
+          Query.limit(500),
+        ]),
+        databases.listDocuments(dbId, paymentRecordsCollId, [
           Query.equal("userId", userIds),
           Query.equal("type", "rent"),
           Query.equal("method", "pending"),
           Query.startsWith("date", todayIST),
-        ]
+          Query.limit(500),
+        ]),
+      ]);
+
+      const collectedRentSet = new Set(
+        collectedRentRes.documents.map((d) => d.userId)
+      );
+      const pendingRentMap = new Map(
+        pendingRentRes.documents.map((d) => [d.userId, d.$id])
       );
 
-      const usersWithPendingRent = new Set(
-        pendingRentToday.documents.map((d) => d.userId)
+      // ✅ API CALL #4: Batch create missing pending records (if any)
+      const usersNeedingPending = usersRes.documents.filter(
+        (u) => !collectedRentSet.has(u.$id) && !pendingRentMap.has(u.$id)
       );
 
-      // 4. Create missing pending rent records
-      const pendingRentMap = new Map();
-      pendingRentToday.documents.forEach((doc) => {
-        pendingRentMap.set(doc.userId, doc.$id);
-      });
-
-      for (const user of usersRes.documents) {
-        // Skip if user already has any rent record today
-        if (
-          usersWithCollectedRent.has(user.$id) ||
-          usersWithPendingRent.has(user.$id)
-        ) {
-          continue;
-        }
-
-        try {
-          const bike = await databases.getDocument(
-            dbId,
-            bikesCollId,
-            user.bikeId
-          );
-          if (bike.bikeStatus && bike.currOwner === user.$id) {
+      if (usersNeedingPending.length > 0) {
+        // Create records in parallel (Appwrite handles this efficiently)
+        const createPromises = usersNeedingPending.map(async (user) => {
+          try {
             const doc = await databases.createDocument(
               dbId,
               paymentRecordsCollId,
@@ -156,56 +142,61 @@ const Payments = () => {
               }
             );
             pendingRentMap.set(user.$id, doc.$id);
-            usersWithPendingRent.add(user.$id);
+          } catch (error) {
+            console.error(`Failed to create pending for ${user.$id}:`, error);
           }
-        } catch (error) {
-          console.error(`Error processing user ${user.$id}:`, error);
-        }
+        });
+
+        // Wait for all creates to complete
+        await Promise.allSettled(createPromises);
       }
 
-      // 5. Build final payment list - SHOW ALL ACTIVE USERS
+      // Build final payment list
       const finalList = usersRes.documents.map((user) => {
-        const userPendingAmt = parseInt(user.pendingAmount || 0);
-        const rentCollected = usersWithCollectedRent.has(user.$id);
-        const paymentId = pendingRentMap.get(user.$id) || null;
+        const pendingAmt = parseInt(user.pendingAmount || 0);
+        const rentCollected = collectedRentSet.has(user.$id);
 
-        // Calculate total to collect (only uncollected amounts)
+        // Calculate only uncollected amounts
         let totalToCollect = 0;
-        if (!rentCollected) {
-          totalToCollect += WEEKLY_RENT;
-        }
-        if (userPendingAmt > 0) {
-          totalToCollect += userPendingAmt;
-        }
+        if (!rentCollected) totalToCollect += WEEKLY_RENT;
+        if (pendingAmt > 0) totalToCollect += pendingAmt;
 
         return {
-          paymentId,
+          paymentId: pendingRentMap.get(user.$id) || null,
           userId: user.$id,
           userName: user.userName || "N/A",
           userPhone: user.userPhone || "N/A",
-          rentAmount: WEEKLY_RENT,
-          pendingAmount: userPendingAmt,
+          pendingAmount: pendingAmt,
           totalToCollect,
           rentCollected,
-          pendingCollected: false,
         };
       });
 
       setPayments(finalList);
-      setTotalAmount(finalList.reduce((sum, p) => sum + p.totalToCollect, 0));
+
+      // Calculate separate totals
+      const totalRent = finalList.reduce(
+        (sum, p) => sum + (p.rentCollected ? 0 : WEEKLY_RENT),
+        0
+      );
+      const totalPending = finalList.reduce(
+        (sum, p) => sum + p.pendingAmount,
+        0
+      );
+      const total = totalRent + totalPending;
+
+      setTotalAmount({ rent: totalRent, pending: totalPending, total });
     } catch (e) {
       console.error(e);
-      toast.error("Failed to load rent");
+      toast.error("Failed to load rent data");
     } finally {
       setLoading(false);
     }
   };
 
   const openModal = (payment, type) => {
-    const amount =
-      type === "rent" ? payment.rentAmount : payment.pendingAmount;
+    const amount = type === "rent" ? WEEKLY_RENT : payment.pendingAmount;
 
-    // Check if already collected
     if (type === "rent" && payment.rentCollected) {
       toast.error("Rent already collected today");
       return;
@@ -237,7 +228,7 @@ const Payments = () => {
 
     try {
       if (currentPayment.collectType === "rent") {
-        // Update rent payment record from pending to collected
+        // Update rent payment record
         const updateData = { method: paymentMethod };
         if (paymentMethod === "online") updateData.utrNumber = utrInput.trim();
 
@@ -248,7 +239,7 @@ const Payments = () => {
           updateData
         );
 
-        // Update UI - mark rent as collected
+        // Update UI
         setPayments((prev) =>
           prev.map((p) =>
             p.userId === currentPayment.userId
@@ -260,11 +251,15 @@ const Payments = () => {
               : p
           )
         );
-        setTotalAmount((prev) => prev - WEEKLY_RENT);
+        setTotalAmount((prev) => ({
+          rent: prev.rent - WEEKLY_RENT,
+          pending: prev.pending,
+          total: prev.total - WEEKLY_RENT,
+        }));
 
         toast.success(`✅ Rent ₹${WEEKLY_RENT} collected!`);
       } else if (currentPayment.collectType === "pending") {
-        // Create pending clearance record with IST timestamp
+        // Create pending clearance record
         await databases.createDocument(
           dbId,
           paymentRecordsCollId,
@@ -289,7 +284,7 @@ const Payments = () => {
           }
         );
 
-        // Update UI - mark pending as cleared
+        // Update UI
         setPayments((prev) =>
           prev.map((p) =>
             p.userId === currentPayment.userId
@@ -297,12 +292,16 @@ const Payments = () => {
                   ...p,
                   pendingAmount: 0,
                   pendingCollected: true,
-                  totalToCollect: p.rentCollected ? 0 : p.rentAmount,
+                  totalToCollect: p.rentCollected ? 0 : WEEKLY_RENT,
                 }
               : p
           )
         );
-        setTotalAmount((prev) => prev - currentPayment.pendingAmount);
+        setTotalAmount((prev) => ({
+          rent: prev.rent,
+          pending: prev.pending - currentPayment.pendingAmount,
+          total: prev.total - currentPayment.pendingAmount,
+        }));
 
         toast.success(`✅ Pending ₹${currentPayment.pendingAmount} cleared!`);
       }
@@ -365,27 +364,46 @@ const Payments = () => {
 
       {selectedCompany && (
         <>
-          <div className="bg-gray-50 p-4 rounded mb-6 flex flex-col sm:flex-row justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-lg">
-                {companies.find((c) => c.$id === selectedCompany)?.companyName}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {payments.length} active user(s) with bikes
-              </p>
-            </div>
-            <div className="text-left sm:text-right">
-              <p className="text-3xl font-bold text-green-600">
-                ₹{totalAmount.toLocaleString("en-IN")}
-              </p>
-              <p className="text-sm text-gray-600">Total Uncollected</p>
+          <div className="bg-gray-50 p-4 rounded mb-6">
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
+              <div>
+                <h3 className="font-semibold text-lg">
+                  {
+                    companies.find((c) => c.$id === selectedCompany)
+                      ?.companyName
+                  }
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {payments.length} active user(s) with bikes
+                </p>
+              </div>
+              <div className="text-left sm:text-right">
+                <p className="text-3xl font-bold text-green-600">
+                  ₹{totalAmount.total.toLocaleString("en-IN")}
+                </p>
+                <p className="text-sm text-gray-600">Total Uncollected</p>
+                <div className="mt-2 flex gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Rent:</span>
+                    <span className="font-semibold text-red-600 ml-1">
+                      ₹{totalAmount.rent.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Pending:</span>
+                    <span className="font-semibold text-blue-600 ml-1">
+                      ₹{totalAmount.pending.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           {loading ? (
             <div className="text-center py-8">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-2 text-gray-600">Loading...</p>
+              <p className="mt-2 text-gray-600">Loading payments...</p>
             </div>
           ) : payments.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded">
