@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { databases } from "../appwrite";
 import { Query, ID } from "appwrite";
 import toast from "react-hot-toast";
@@ -28,17 +28,32 @@ const Payments = () => {
 
   const WEEKLY_RENT = 1700;
 
-  // IST helpers - cleaner implementation
-  const getISTDate = () => {
-    return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  // Get IST date range for today (start and end in UTC)
+  const getTodayISTRange = () => {
+    const now = new Date();
+
+    // Get IST date string (YYYY-MM-DD)
+    const istDateString = now.toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata",
+    });
+
+    // Create start of day in IST (00:00:00)
+    const startOfDayIST = new Date(istDateString + "T00:00:00+05:30");
+
+    // Create end of day in IST (23:59:59)
+    const endOfDayIST = new Date(istDateString + "T23:59:59+05:30");
+
+    // Convert to UTC ISO strings for Appwrite queries
+    return {
+      start: startOfDayIST.toISOString(),
+      end: endOfDayIST.toISOString(),
+      dateString: istDateString,
+    };
   };
 
-  const getISTTimestamp = () => {
-    return (
-      new Date()
-        .toLocaleString("sv", { timeZone: "Asia/Kolkata" })
-        .replace(" ", "T") + "Z"
-    );
+  // Get current timestamp in UTC (Appwrite compatible)
+  const getUTCTimestamp = () => {
+    return new Date().toISOString();
   };
 
   useEffect(() => {
@@ -72,15 +87,16 @@ const Payments = () => {
         return;
       }
 
-      const todayIST = getISTDate();
+      const { start: todayStart, end: todayEnd } = getTodayISTRange();
 
-      // ✅ API CALL #1: Get ALL active users with bikes in ONE query
-      // No need to check each bike individually!
+      console.log("Querying for today IST:", todayStart, "to", todayEnd);
+
+      // Get ALL active users with bikes
       const usersRes = await databases.listDocuments(dbId, usersCollId, [
         Query.equal("userCompany", company.companyName),
         Query.equal("userStatus", true),
         Query.isNotNull("bikeId"),
-        Query.limit(500), // Adjust based on your needs
+        Query.limit(500),
       ]);
 
       if (usersRes.documents.length === 0) {
@@ -92,7 +108,7 @@ const Payments = () => {
 
       const userIds = usersRes.documents.map((u) => u.$id);
 
-      // ✅ API CALL #2 & #3: Get rent status for ALL users in TWO parallel queries
+      // Get rent status for today using UTC timestamps
       const [collectedRentRes, pendingRentRes] = await Promise.all([
         databases.listDocuments(dbId, paymentRecordsCollId, [
           Query.equal("userId", userIds),
@@ -101,17 +117,22 @@ const Payments = () => {
             Query.equal("method", "cash"),
             Query.equal("method", "online"),
           ]),
-          Query.startsWith("date", todayIST),
+          Query.greaterThanEqual("date", todayStart),
+          Query.lessThanEqual("date", todayEnd),
           Query.limit(500),
         ]),
         databases.listDocuments(dbId, paymentRecordsCollId, [
           Query.equal("userId", userIds),
           Query.equal("type", "rent"),
           Query.equal("method", "pending"),
-          Query.startsWith("date", todayIST),
+          Query.greaterThanEqual("date", todayStart),
+          Query.lessThanEqual("date", todayEnd),
           Query.limit(500),
         ]),
       ]);
+
+      console.log("Collected rent today:", collectedRentRes.documents.length);
+      console.log("Pending rent today:", pendingRentRes.documents.length);
 
       const collectedRentSet = new Set(
         collectedRentRes.documents.map((d) => d.userId)
@@ -120,13 +141,18 @@ const Payments = () => {
         pendingRentRes.documents.map((d) => [d.userId, d.$id])
       );
 
-      // ✅ API CALL #4: Batch create missing pending records (if any)
+      // Create missing pending records
       const usersNeedingPending = usersRes.documents.filter(
         (u) => !collectedRentSet.has(u.$id) && !pendingRentMap.has(u.$id)
       );
 
       if (usersNeedingPending.length > 0) {
-        // Create records in parallel (Appwrite handles this efficiently)
+        console.log(
+          "Creating pending records for:",
+          usersNeedingPending.length,
+          "users"
+        );
+
         const createPromises = usersNeedingPending.map(async (user) => {
           try {
             const doc = await databases.createDocument(
@@ -138,7 +164,7 @@ const Payments = () => {
                 amount: WEEKLY_RENT,
                 type: "rent",
                 method: "pending",
-                date: getISTTimestamp(),
+                date: getUTCTimestamp(),
               }
             );
             pendingRentMap.set(user.$id, doc.$id);
@@ -147,11 +173,10 @@ const Payments = () => {
           }
         });
 
-        // Wait for all creates to complete
         await Promise.allSettled(createPromises);
       }
 
-      // Build final payment list
+      // Build final payment list - SHOW ALL ACTIVE USERS
       const finalList = usersRes.documents.map((user) => {
         const pendingAmt = parseInt(user.pendingAmount || 0);
         const rentCollected = collectedRentSet.has(user.$id);
@@ -228,8 +253,11 @@ const Payments = () => {
 
     try {
       if (currentPayment.collectType === "rent") {
-        // Update rent payment record
-        const updateData = { method: paymentMethod };
+        // Update rent payment record with UTC timestamp
+        const updateData = {
+          method: paymentMethod,
+          date: getUTCTimestamp(), // Update with current UTC timestamp
+        };
         if (paymentMethod === "online") updateData.utrNumber = utrInput.trim();
 
         await databases.updateDocument(
@@ -259,7 +287,7 @@ const Payments = () => {
 
         toast.success(`✅ Rent ₹${WEEKLY_RENT} collected!`);
       } else if (currentPayment.collectType === "pending") {
-        // Create pending clearance record
+        // Create pending clearance record with UTC timestamp
         await databases.createDocument(
           dbId,
           paymentRecordsCollId,
@@ -270,7 +298,7 @@ const Payments = () => {
             type: "pending_clearance",
             method: paymentMethod,
             utrNumber: paymentMethod === "online" ? utrInput.trim() : null,
-            date: getISTTimestamp(),
+            date: getUTCTimestamp(),
           }
         );
 
@@ -334,7 +362,8 @@ const Payments = () => {
             Weekly Rent Collection (₹1,700)
           </h1>
           <p className="text-gray-600">
-            All active users shown. Buttons disabled after collection.
+            All active users shown. Buttons disabled after collection until next
+            day.
           </p>
         </div>
         <button
@@ -382,7 +411,7 @@ const Payments = () => {
                   ₹{totalAmount.total.toLocaleString("en-IN")}
                 </p>
                 <p className="text-sm text-gray-600">Total Uncollected</p>
-                <div className="mt-2 flex gap-4 text-sm">
+                <div className="mt-2 flex gap-4 text-sm justify-end">
                   <div>
                     <span className="text-gray-500">Rent:</span>
                     <span className="font-semibold text-red-600 ml-1">
