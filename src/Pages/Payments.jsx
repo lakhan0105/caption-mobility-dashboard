@@ -26,7 +26,20 @@ const Payments = () => {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [utrInput, setUtrInput] = useState("");
 
-  const WEEKLY_RENT = 1700;
+  // Plan types and their rent amounts
+  const PLAN_RATES = {
+    BS: 1800,
+    CS: 1740,
+  };
+
+  // Helper function to get rent amount based on plan type
+  const getRentAmount = (planType) => {
+    // If planType is empty or null, default to BS
+    if (!planType || planType.trim() === "") {
+      return PLAN_RATES.BS;
+    }
+    return PLAN_RATES[planType] || PLAN_RATES.BS;
+  };
 
   // Get IST date range for today (start and end in UTC)
   const getTodayISTRange = () => {
@@ -155,13 +168,14 @@ const Payments = () => {
 
         const createPromises = usersNeedingPending.map(async (user) => {
           try {
+            const userRentAmount = getRentAmount(user.planType);
             const doc = await databases.createDocument(
               dbId,
               paymentRecordsCollId,
               ID.unique(),
               {
                 userId: user.$id,
-                amount: WEEKLY_RENT,
+                amount: userRentAmount,
                 type: "rent",
                 method: "pending",
                 date: getUTCTimestamp(),
@@ -180,10 +194,12 @@ const Payments = () => {
       const finalList = usersRes.documents.map((user) => {
         const pendingAmt = parseInt(user.pendingAmount || 0);
         const rentCollected = collectedRentSet.has(user.$id);
+        const planType = user.planType || "BS"; // Default to BS if empty
+        const weeklyRent = getRentAmount(planType);
 
         // Calculate only uncollected amounts
         let totalToCollect = 0;
-        if (!rentCollected) totalToCollect += WEEKLY_RENT;
+        if (!rentCollected) totalToCollect += weeklyRent;
         if (pendingAmt > 0) totalToCollect += pendingAmt;
 
         return {
@@ -191,6 +207,8 @@ const Payments = () => {
           userId: user.$id,
           userName: user.userName || "N/A",
           userPhone: user.userPhone || "N/A",
+          planType,
+          weeklyRent,
           pendingAmount: pendingAmt,
           totalToCollect,
           rentCollected,
@@ -201,7 +219,7 @@ const Payments = () => {
 
       // Calculate separate totals
       const totalRent = finalList.reduce(
-        (sum, p) => sum + (p.rentCollected ? 0 : WEEKLY_RENT),
+        (sum, p) => sum + (p.rentCollected ? 0 : p.weeklyRent),
         0
       );
       const totalPending = finalList.reduce(
@@ -220,7 +238,7 @@ const Payments = () => {
   };
 
   const openModal = (payment, type) => {
-    const amount = type === "rent" ? WEEKLY_RENT : payment.pendingAmount;
+    const amount = type === "rent" ? payment.weeklyRent : payment.pendingAmount;
 
     if (type === "rent" && payment.rentCollected) {
       toast.error("Rent already collected today");
@@ -256,7 +274,7 @@ const Payments = () => {
         // Update rent payment record with UTC timestamp
         const updateData = {
           method: paymentMethod,
-          date: getUTCTimestamp(), // Update with current UTC timestamp
+          date: getUTCTimestamp(),
         };
         if (paymentMethod === "online") updateData.utrNumber = utrInput.trim();
 
@@ -280,12 +298,12 @@ const Payments = () => {
           )
         );
         setTotalAmount((prev) => ({
-          rent: prev.rent - WEEKLY_RENT,
+          rent: prev.rent - currentPayment.weeklyRent,
           pending: prev.pending,
-          total: prev.total - WEEKLY_RENT,
+          total: prev.total - currentPayment.weeklyRent,
         }));
 
-        toast.success(`✅ Rent ₹${WEEKLY_RENT} collected!`);
+        toast.success(`✅ Rent ₹${currentPayment.weeklyRent} collected!`);
       } else if (currentPayment.collectType === "pending") {
         // Create pending clearance record with UTC timestamp
         await databases.createDocument(
@@ -320,7 +338,7 @@ const Payments = () => {
                   ...p,
                   pendingAmount: 0,
                   pendingCollected: true,
-                  totalToCollect: p.rentCollected ? 0 : WEEKLY_RENT,
+                  totalToCollect: p.rentCollected ? 0 : p.weeklyRent,
                 }
               : p
           )
@@ -354,16 +372,28 @@ const Payments = () => {
     return days[dayNum] || "N/A";
   };
 
+  const getPlanBadge = (planType) => {
+    if (planType === "CS") {
+      return (
+        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+          CS
+        </span>
+      );
+    }
+    return (
+      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+        BS
+      </span>
+    );
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 bg-white">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">
-            Weekly Rent Collection (₹1,700)
-          </h1>
+          <h1 className="text-2xl font-bold">Weekly Rent Collection</h1>
           <p className="text-gray-600">
-            All active users shown. Buttons disabled after collection until next
-            day.
+            BS Plan: ₹1,800/week • CS Plan: ₹1,740/week
           </p>
         </div>
         <button
@@ -452,6 +482,9 @@ const Payments = () => {
                         Phone
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Plan
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Pending
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -474,6 +507,9 @@ const Payments = () => {
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {p.userPhone}
                         </td>
+                        <td className="px-6 py-4 text-sm">
+                          {getPlanBadge(p.planType)}
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {p.pendingAmount === 0 ? (
                             <span className="text-gray-400">₹0</span>
@@ -490,7 +526,7 @@ const Payments = () => {
                             </span>
                           ) : (
                             <span className="text-red-600 font-medium">
-                              ₹1,700
+                              ₹{p.weeklyRent.toLocaleString("en-IN")}
                             </span>
                           )}
                         </td>
@@ -554,6 +590,7 @@ const Payments = () => {
                           {p.userName}
                         </p>
                         <p className="text-sm text-gray-600">{p.userPhone}</p>
+                        <div className="mt-1">{getPlanBadge(p.planType)}</div>
                       </div>
                       <p className="text-xl font-bold text-gray-900">
                         ₹{p.totalToCollect.toLocaleString("en-IN")}
@@ -578,7 +615,7 @@ const Payments = () => {
                           </span>
                         ) : (
                           <span className="text-red-600 font-medium">
-                            ₹1,700
+                            ₹{p.weeklyRent.toLocaleString("en-IN")}
                           </span>
                         )}
                       </div>
@@ -639,9 +676,15 @@ const Payments = () => {
                 ? "Weekly Rent"
                 : "Pending Amount"}
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-2">
               {currentPayment.userName}
             </p>
+            {currentPayment.collectType === "rent" && (
+              <p className="text-xs text-gray-500 mb-4">
+                Plan: {currentPayment.planType} (₹{currentPayment.weeklyRent}
+                /week)
+              </p>
+            )}
             <p className="text-3xl font-bold text-green-600 mb-4">
               ₹{currentPayment.amount.toLocaleString("en-IN")}
             </p>
