@@ -20,7 +20,6 @@ import { storage } from "../appwrite";
 
 const userBucketId = import.meta.env.VITE_USER_BUCKET_ID;
 
-// Predefined list of companies
 const companyOptions = [
   "Zomato",
   "Blinkit",
@@ -47,11 +46,11 @@ function UserForm() {
     userPhone: "",
     userCompany: "",
     userLocation: "",
+    planType: "CS", // ← NEW: Default plan
   });
 
   const [userPhoto, setUserPhoto] = useState(null);
 
-  // Pre-fill form for editing
   useEffect(() => {
     if (isEditUser && selectedUser) {
       setUserInputState({
@@ -60,28 +59,25 @@ function UserForm() {
         userPhone: selectedUser.userPhone || "",
         userCompany: selectedUser.userCompany || "",
         userLocation: selectedUser.userLocation || "",
+        planType: selectedUser.planType || "BS",
       });
     }
   }, [isEditUser, selectedUser]);
 
-  // Handle modal close
   function handleCloseModal() {
     dispatch(closeModal());
     dispatch(hideOptionsModal());
   }
 
-  // Handle input change
   function handleChange(e) {
     const key = e.target.name;
     let value = e.target.value;
-
     setUserInputState((prev) => ({
       ...prev,
       [key]: value,
     }));
   }
 
-  // Handle success after user creation or update
   function postUserSuccess(msg, companyName) {
     if (!companyName) {
       toast.error("Company name is required");
@@ -91,13 +87,14 @@ function UserForm() {
     dispatch(addCompanyIfNew(companyName.toLowerCase()))
       .unwrap()
       .then(() => {
-        dispatch(getCompanyNames()); // Refresh company names
+        dispatch(getCompanyNames());
         setUserInputState({
           userName: "",
           userRegisterId: "",
           userPhone: "",
           userCompany: "",
           userLocation: "",
+          planType: "CS",
         });
         setUserPhoto(null);
         dispatch(closeModal());
@@ -108,18 +105,13 @@ function UserForm() {
         toast.error(
           `Failed to add company: ${error.message || "Unknown error"}`
         );
-        console.error("addCompanyIfNew error:", error);
       });
   }
 
-  // Handle adding a new user
   async function handleAddUser(e) {
     e.preventDefault();
     const docID = ID.unique();
 
-    console.log("running handleAddUser...");
-
-    // Save the user photo before saving information
     let imageId = null;
     if (userPhoto) {
       try {
@@ -129,9 +121,7 @@ function UserForm() {
           userPhoto
         );
         imageId = imageUpload.$id;
-        console.log("Uploaded image ID:", imageId);
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error("Failed to upload photo");
         return;
       }
@@ -145,6 +135,7 @@ function UserForm() {
       userCompany: userInputState.userCompany.toLowerCase(),
       userLocation: userInputState.userLocation.toLowerCase(),
       userPhotoId: imageId,
+      planType: userInputState.planType || "CS", // ← ONLY THIS IS NEW
     };
 
     dispatch(createUser(userData))
@@ -152,25 +143,18 @@ function UserForm() {
         if (createUser.fulfilled.match(resp)) {
           postUserSuccess(
             "User created successfully!",
-            userInputState.userCompany.toLowerCase()
+            userInputState.userCompany
           );
         }
       })
       .catch((error) => {
-        console.error("Error creating user:", error);
-        toast.error("Error in creating the user!");
+        toast.error("Error creating user!");
       });
   }
 
-  // Handle editing an existing user
   async function handleEditUser(e) {
     e.preventDefault();
-    console.log("Editing user details:", {
-      userId: selectedUser?.$id,
-      ...userInputState,
-    });
 
-    // Handle photo update if a new photo is selected
     let imageId = selectedUser?.userPhotoId || null;
     if (userPhoto) {
       try {
@@ -180,9 +164,7 @@ function UserForm() {
           userPhoto
         );
         imageId = imageUpload.$id;
-        console.log("Uploaded new image ID:", imageId);
       } catch (error) {
-        console.error("Error uploading image:", error);
         toast.error("Failed to upload photo");
         return;
       }
@@ -196,20 +178,17 @@ function UserForm() {
       userCompany: userInputState.userCompany.toLowerCase(),
       userLocation: userInputState.userLocation.toLowerCase(),
       userPhotoId: imageId,
+      planType: userInputState.planType, // ← ONLY THIS IS NEW
     };
 
     dispatch(editUser(userData))
       .then((resp) => {
         if (editUser.fulfilled.match(resp)) {
-          postUserSuccess(
-            "Updated successfully!",
-            userInputState.userCompany.toLowerCase()
-          );
+          postUserSuccess("Updated successfully!", userInputState.userCompany);
         }
       })
       .catch((error) => {
-        console.error("Error updating user:", error);
-        toast.error("Error in updating user details!");
+        toast.error("Error updating user!");
       });
   }
 
@@ -219,59 +198,53 @@ function UserForm() {
       onSubmit={isEditUser ? handleEditUser : handleAddUser}
     >
       <button
-        className="absolute right-4 top-4 cursor-pointer"
+        className="absolute right-4 top-4 cursor-pointer text-gray-600 hover:text-red-600"
         onClick={handleCloseModal}
         type="button"
       >
-        Close
+        ✕
       </button>
 
-      <h2 className="text-2xl mb-2">User Details</h2>
+      <h2 className="text-2xl mb-2 font-bold">User Details</h2>
 
-      {/* USER NAME */}
       <TextField
         name="userName"
         required
         size="small"
-        onChange={handleChange}
-        value={userInputState.userName}
-        id="userName"
         label="Full Name"
         variant="outlined"
+        value={userInputState.userName}
+        onChange={handleChange}
       />
 
-      {/* REGISTER ID */}
       <TextField
         name="userRegisterId"
         size="small"
         label="Register ID"
         required
-        onChange={handleChange}
         value={userInputState.userRegisterId}
+        onChange={handleChange}
       />
 
-      {/* PHONE */}
       <TextField
         name="userPhone"
         size="small"
         label="Phone"
         required
-        onChange={handleChange}
         value={userInputState.userPhone}
+        onChange={handleChange}
       />
 
-      {/* COMPANY */}
       <FormControl size="small" required>
-        <InputLabel id="userCompany-label">Company</InputLabel>
+        <InputLabel>Company</InputLabel>
         <Select
-          labelId="userCompany-label"
           name="userCompany"
           value={userInputState.userCompany}
           label="Company"
           onChange={handleChange}
         >
           <MenuItem value="">
-            <em>Select a company</em>
+            <em>Select company</em>
           </MenuItem>
           {companyOptions.map((company) => (
             <MenuItem key={company} value={company.toLowerCase()}>
@@ -281,25 +254,38 @@ function UserForm() {
         </Select>
       </FormControl>
 
-      {/* USER LOCATION */}
+      {/* NEW: Plan Type */}
+      <FormControl size="small" required>
+        <InputLabel>Plan Type</InputLabel>
+        <Select
+          name="planType"
+          value={userInputState?.planType}
+          label="Plan Type"
+          onChange={handleChange}
+        >
+          <MenuItem value="CS">CS - ₹1740/week</MenuItem>
+          <MenuItem value="BS">BS - ₹1800/week</MenuItem>
+        </Select>
+      </FormControl>
+
       <TextField
         name="userLocation"
         size="small"
         label="Location"
         required
-        onChange={handleChange}
         value={userInputState.userLocation}
+        onChange={handleChange}
       />
 
-      {/* USER PHOTO INPUT */}
       <TextField
-        name="userPhoto"
         type="file"
+        label="User Photo"
+        InputLabelProps={{ shrink: true }}
         inputProps={{ accept: "image/*" }}
         onChange={(e) => setUserPhoto(e.target.files[0])}
       />
 
-      <SubmitBtn text={isEditUser ? "Update" : "Create a new user"} />
+      <SubmitBtn text={isEditUser ? "Update User" : "Create User"} />
     </form>
   );
 }

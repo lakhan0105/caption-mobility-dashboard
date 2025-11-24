@@ -79,6 +79,7 @@ export const editUser = createAsyncThunk(
       userPhone,
       userCompany,
       userLocation,
+      planType,
     } = data;
     try {
       const resp = await databases.updateDocument(dbId, usersCollId, userId, {
@@ -89,6 +90,7 @@ export const editUser = createAsyncThunk(
           ? userCompany.trim().toLowerCase()
           : userCompany,
         userLocation,
+        planType,
       });
       return resp;
     } catch (error) {
@@ -585,9 +587,9 @@ const userSlice = createSlice({
       .addCase(editUser.pending, (state) => {
         state.isUserLoading = true;
       })
-      .addCase(editUser.fulfilled, (state) => {
+      .addCase(editUser.fulfilled, (state, action) => {
         state.isUserLoading = false;
-        toast.success("Updated the user details successfully!");
+        toast.success("Updated user details successfully!");
       })
       .addCase(editUser.rejected, (state, { payload }) => {
         state.isUserLoading = false;
