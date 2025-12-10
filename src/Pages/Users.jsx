@@ -21,6 +21,7 @@ import {
   setIsBlockFrom,
   showModal,
 } from "../features/modal/modalSlice";
+import ImportUsersButton from "../Components/ImportUsersButton";
 
 function Users() {
   const { usersList, usersListCount, isUserLoading, activeFilter, errMsg } =
@@ -102,6 +103,7 @@ function Users() {
             placeHolder={"find users"}
           />
           <Filters />
+          <ImportUsersButton />
         </PageHeader>
 
         {/* Users table */}
