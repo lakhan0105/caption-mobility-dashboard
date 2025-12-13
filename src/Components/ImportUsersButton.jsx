@@ -1,15 +1,12 @@
-// src/components/ImportUsersButton.jsx
 import React, { useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-// import { databases, Query } from "../appwrite";
-
+import { databases } from "../appwrite";
 import { updateBike } from "../features/bike/bikeSlice";
 import { updateBattery } from "../features/battery/batterySlice";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import { FaFileExcel } from "react-icons/fa";
 import { ID, Query } from "appwrite";
-import { databases } from "../appwrite";
 
 const dbId = import.meta.env.VITE_DB_ID;
 const usersCollId = import.meta.env.VITE_USERS_COLL_ID;
@@ -58,7 +55,6 @@ function ImportUsersButton() {
           }
 
           try {
-            // 1. Find or Create User
             let userDoc;
             const existingUsers = await databases.listDocuments(
               dbId,
@@ -103,7 +99,7 @@ function ImportUsersButton() {
               userDoc = newUser;
             }
 
-            // 2. Assign Bike
+            // Assign Bike + update bikeModel if provided
             if (row.bikeRegNum) {
               const bikeRes = await databases.listDocuments(dbId, bikesCollId, [
                 Query.equal(
@@ -111,9 +107,14 @@ function ImportUsersButton() {
                   row.bikeRegNum.toString().trim().toUpperCase()
                 ),
               ]);
-
               if (bikeRes.documents.length > 0) {
                 const bike = bikeRes.documents[0];
+
+                if (row.bikeModel) {
+                  await databases.updateDocument(dbId, bikesCollId, bike.$id, {
+                    bikeModel: row.bikeModel.trim(),
+                  });
+                }
 
                 await dispatch(
                   updateBike({
@@ -126,12 +127,10 @@ function ImportUsersButton() {
                 await databases.updateDocument(dbId, usersCollId, userDoc.$id, {
                   bikeId: bike.$id,
                 });
-              } else {
-                console.warn(`Bike not found: ${row.bikeRegNum}`);
               }
             }
 
-            // 3. Assign Battery
+            // Assign Battery
             if (row.batteryRegNum) {
               const batRes = await databases.listDocuments(
                 dbId,
@@ -143,10 +142,8 @@ function ImportUsersButton() {
                   ),
                 ]
               );
-
               if (batRes.documents.length > 0) {
                 const battery = batRes.documents[0];
-
                 await dispatch(
                   updateBattery({
                     batteryId: battery.$id,
@@ -159,8 +156,6 @@ function ImportUsersButton() {
                 await databases.updateDocument(dbId, usersCollId, userDoc.$id, {
                   batteryId: battery.$id,
                 });
-              } else {
-                console.warn(`Battery not found: ${row.batteryRegNum}`);
               }
             }
 
@@ -172,13 +167,12 @@ function ImportUsersButton() {
         }
 
         toast.success(
-          `Import completed! Success: ${successCount} users ${
+          `Import completed! Success: ${successCount} ${
             errorCount > 0 ? `| Failed: ${errorCount}` : ""
           }`
         );
       } catch (err) {
-        toast.error("Failed to process file. Check format and try again.");
-        console.error(err);
+        toast.error("Failed to process file");
       } finally {
         setIsProcessing(false);
         if (fileInputRef.current) fileInputRef.current.value = "";

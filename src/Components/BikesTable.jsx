@@ -24,16 +24,14 @@ function BikesTable({ data, lastBikeElementRef }) {
   const { optionsModalState } = useSelector((state) => state.modalReducer);
   const dispatch = useDispatch();
 
-  // Data for table header and body
   const bikesTableHeadings = isMobile
-    ? ["#", "bike number", "status"]
-    : ["#", "bike number", "status", "curr owner", "assigned at"];
+    ? ["#", "bike number", "model", "status", ""]
+    : ["#", "bike number", "model", "status", "curr owner", "assigned at", ""];
 
   const bikesTableCols = isMobile
-    ? "0.1fr 0.6fr 0.5fr 0.05fr"
-    : "0.1fr 0.6fr 0.5fr 0.5fr 0.5fr 0.05fr";
+    ? "0.1fr 0.5fr 0.6fr 0.5fr 0.05fr"
+    : "0.1fr 0.5fr 0.6fr 0.5fr 0.5fr 0.5fr 0.05fr";
 
-  // Handle options button
   function handleOptionsBtn(e, data) {
     e.preventDefault();
     if (optionsModalState) {
@@ -46,7 +44,6 @@ function BikesTable({ data, lastBikeElementRef }) {
     }
   }
 
-  // Handle edit button
   function handleEditBike(e) {
     e.preventDefault();
     dispatch(setEditBike(true));
@@ -54,7 +51,6 @@ function BikesTable({ data, lastBikeElementRef }) {
     dispatch(hideOptionsModal());
   }
 
-  // Handle delete button
   function handleDeleteBike(e) {
     e.preventDefault();
     if (selectedBike?.currOwner) {
@@ -83,10 +79,10 @@ function BikesTable({ data, lastBikeElementRef }) {
           const {
             $id,
             bikeRegNum,
+            bikeModel,
             bikeStatus,
             currOwner,
             assignedAt,
-            returnedAt,
           } = item;
           const isLastBike = index === data.length - 1;
 
@@ -96,12 +92,13 @@ function BikesTable({ data, lastBikeElementRef }) {
               key={$id}
               ref={isLastBike ? lastBikeElementRef : null}
             >
-              {/* SL NUMBER */}
               <p className="text-[0.7rem] w-[20px] h-[20px] font-medium border bg-indigo-950 text-white flex items-center justify-center rounded-2xl mt-0.5">
                 {index + 1}
               </p>
 
               <p>{bikeRegNum?.toUpperCase()}</p>
+
+              <p className="text-xs capitalize">{bikeModel || "-"}</p>
 
               <div className="flex gap-4 justify-center text-xs">
                 {bikeStatus ? (
@@ -116,7 +113,6 @@ function BikesTable({ data, lastBikeElementRef }) {
               {!isMobile && <p>{currOwner ? currOwner : "-"}</p>}
               {!isMobile && <p>{assignedAt ? assignedAt : "-"}</p>}
 
-              {/* OPTIONS BUTTON */}
               <button onClick={(e) => handleOptionsBtn(e, item)}>
                 <SlOptionsVertical />
               </button>
@@ -127,7 +123,6 @@ function BikesTable({ data, lastBikeElementRef }) {
 
       {optionsModalState && selectedBike?.$id && (
         <OptionsModal
-          optionsModalState={optionsModalState}
           handleEditBtn={handleEditBike}
           handleDeleteBtn={handleDeleteBike}
         />
