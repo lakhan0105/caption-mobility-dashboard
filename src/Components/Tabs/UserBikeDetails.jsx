@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import SimpleBtn from "../Buttons/SimpleBtn";
 import { IoIosReturnLeft } from "react-icons/io";
 import moment from "moment";
-import { FaPlus } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
 import {
   hideLoader,
@@ -19,21 +18,22 @@ import InfoCardRowTwo from "../InfoCardRowTwo";
 function UserBikeDetails({ userBikeId, handleReturnBike }) {
   const dispatch = useDispatch();
 
-  // get the details of the bike -> stored in bikeById
+  // Get bike details from Redux (includes bikeModel now)
   const { bikeById, isLoading } = useSelector((state) => state.bikeReducer);
 
-  // if the user has a bike, then get the details of that assigned bike when the page loads
+  // Fetch bike details when userBikeId changes
   useEffect(() => {
     if (userBikeId) {
       dispatch(getBikeById(userBikeId));
     }
-  }, [userBikeId]);
+  }, [userBikeId, dispatch]);
 
   if (isLoading) {
     return <h2 className="p-2 text-center">Loading bike details...</h2>;
   }
 
-  if (!userBikeId) {
+  if (!userBikeId || !bikeById) {
+    return null; // or some fallback UI if no bike assigned
   }
 
   return (
@@ -41,9 +41,8 @@ function UserBikeDetails({ userBikeId, handleReturnBike }) {
       {/* BIKE REGISTER NUMBER */}
       <InfoCardRowTwo
         heading={"bike register number"}
-        value={bikeById?.bikeRegNum}
+        value={bikeById?.bikeRegNum?.toUpperCase()}
       >
-        {/* button to return the bike */}
         <SimpleBtn
           name={"Return"}
           icon={<IoIosReturnLeft />}
@@ -53,6 +52,12 @@ function UserBikeDetails({ userBikeId, handleReturnBike }) {
           handleBtn={handleReturnBike}
         />
       </InfoCardRowTwo>
+
+      {/* BIKE MODEL - NEW */}
+      <InfoCardRow
+        heading={"bike model"}
+        value={bikeById?.bikeModel ? bikeById.bikeModel : "-"}
+      />
 
       {/* BIKE ASSIGNMENT DATE */}
       <InfoCardRow
