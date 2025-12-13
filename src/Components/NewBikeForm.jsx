@@ -21,31 +21,41 @@ function NewBikeForm() {
   );
 
   const dispatch = useDispatch();
-  const [userInputState, setUserInputState] = useState({ bikeRegNum: "" });
+  const [userInputState, setUserInputState] = useState({
+    bikeRegNum: "",
+    bikeModel: "",
+  });
 
   useEffect(() => {
-    if (isEditBike) {
-      console.log("is edit bike is true");
-      setUserInputState({ bikeRegNum: selectedBike?.bikeRegNum });
+    if (isEditBike && selectedBike) {
+      setUserInputState({
+        bikeRegNum: selectedBike?.bikeRegNum || "",
+        bikeModel: selectedBike?.bikeModel || "",
+      });
     }
-  }, []);
+  }, [isEditBike, selectedBike]);
 
   function handleChange(e) {
     const key = e.target.name;
     const value = e.target.value;
-    setUserInputState((prev) => {
-      return { ...prev, [key]: value };
-    });
+    setUserInputState((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   }
 
-  // function to add new bike
   function handleAddNewBike(e) {
     e.preventDefault();
-    dispatch(addBike({ bikeRegNum: userInputState.bikeRegNum.toLowerCase() }))
+    dispatch(
+      addBike({
+        bikeRegNum: userInputState.bikeRegNum.toLowerCase(),
+        bikeModel: userInputState.bikeModel,
+      })
+    )
       .unwrap()
       .then((resp) => {
         if (resp) {
-          setUserInputState({});
+          setUserInputState({ bikeRegNum: "", bikeModel: "" });
           dispatch(closeModal());
           dispatch(getBikes());
         }
@@ -55,7 +65,6 @@ function NewBikeForm() {
       });
   }
 
-  // handleEditBike
   function handleEditBike(e) {
     e.preventDefault();
 
@@ -63,6 +72,7 @@ function NewBikeForm() {
       editBikeRegNum({
         bikeId: selectedBike?.$id,
         bikeRegNum: userInputState?.bikeRegNum,
+        bikeModel: userInputState?.bikeModel,
       })
     )
       .unwrap()
@@ -92,7 +102,6 @@ function NewBikeForm() {
         </span>
       </button>
 
-      {/* BIKE REG NUMBER */}
       <InputRow
         name={"bikeRegNum"}
         label={"bike register id"}
@@ -100,6 +109,15 @@ function NewBikeForm() {
         handleChange={handleChange}
         value={userInputState?.bikeRegNum}
         required={true}
+      />
+
+      <InputRow
+        name={"bikeModel"}
+        label={"bike model (e.g. Hero Splendor)"}
+        type={"text"}
+        handleChange={handleChange}
+        value={userInputState?.bikeModel}
+        placeholder="Optional"
       />
 
       <SubmitBtn text={isEditBike ? "update" : "create a new bike"} />
