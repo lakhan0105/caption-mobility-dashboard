@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { databases } from "../appwrite";
+
 import { updateBike } from "../features/bike/bikeSlice";
 import { updateBattery } from "../features/battery/batterySlice";
 import toast from "react-hot-toast";
@@ -55,16 +56,13 @@ function ImportUsersButton() {
           }
 
           try {
+            // 1. Create or Update User
             let userDoc;
             const existingUsers = await databases.listDocuments(
               dbId,
               usersCollId,
               [Query.equal("userPhone", phone)]
             );
-
-            if (existingUsers.documents.length > 0) {
-              userDoc = existingUsers.documents[0];
-            }
 
             const userData = {
               userName: row.name?.trim().toLowerCase() || `user_${phone}`,
@@ -81,7 +79,8 @@ function ImportUsersButton() {
               planType: plan,
             };
 
-            if (userDoc) {
+            if (existingUsers.documents.length > 0) {
+              userDoc = existingUsers.documents[0];
               await databases.updateDocument(
                 dbId,
                 usersCollId,
@@ -90,89 +89,78 @@ function ImportUsersButton() {
               );
               userDoc = { ...userDoc, ...userData, $id: userDoc.$id };
             } else {
-              const newUser = await databases.createDocument(
+              userDoc = await databases.createDocument(
                 dbId,
                 usersCollId,
                 ID.unique(),
                 userData
               );
-              userDoc = newUser;
             }
 
-            // Assign Bike + update bikeModel if provided
+            let assignedBikeId = null;
+            let assignedBatteryId = null;
+
+            // 2. CREATE NEW BIKE (if bikeRegNum provided)
             if (row.bikeRegNum) {
-              const bikeRes = await databases.listDocuments(dbId, bikesCollId, [
-                Query.equal(
-                  "bikeRegNum",
-                  row.bikeRegNum.toString().trim().toUpperCase()
-                ),
-              ]);
-              if (bikeRes.documents.length > 0) {
-                const bike = bikeRes.documents[0];
-
-                if (row.bikeModel) {
-                  await databases.updateDocument(dbId, bikesCollId, bike.$id, {
-                    bikeModel: row.bikeModel.trim(),
-                  });
+              const newBike = await databases.createDocument(
+                dbId,
+                bikesCollId,
+                ID.unique(),
+                {
+                  bikeRegNum: row.bikeRegNum.toString().trim().toUpperCase(),
+                  bikeModel: row.bikeModel?.trim() || "",
+                  bikeStatus: true,
+                  currOwner: userDoc.$id,
+                  assignedAt: new Date().toISOString(),
                 }
+              );
 
-                await dispatch(
-                  updateBike({
-                    bikeId: bike.$id,
-                    userId: userDoc.$id,
-                    bikeStatus: true,
-                  })
-                ).unwrap();
+              assignedBikeId = newBike.$id;
 
-                await databases.updateDocument(dbId, usersCollId, userDoc.$id, {
-                  bikeId: bike.$id,
-                });
-              }
+              // Update user with bikeId
+              await databases.updateDocument(dbId, usersCollId, userDoc.$id, {
+                bikeId: newBike.$id,
+              });
             }
 
-            // Assign Battery
+            // 3. CREATE NEW BATTERY (if batteryRegNum provided)
             if (row.batteryRegNum) {
-              const batRes = await databases.listDocuments(
+              const newBattery = await databases.createDocument(
                 dbId,
                 batteriesCollId,
-                [
-                  Query.equal(
-                    "batRegNum",
-                    row.batteryRegNum.toString().trim().toUpperCase()
-                  ),
-                ]
+                ID.unique(),
+                {
+                  batRegNum: row.batteryRegNum.toString().trim().toUpperCase(),
+                  batStatus: true,
+                  currOwner: userDoc.$id,
+                  assignedAt: new Date().toISOString(),
+                }
               );
-              if (batRes.documents.length > 0) {
-                const battery = batRes.documents[0];
-                await dispatch(
-                  updateBattery({
-                    batteryId: battery.$id,
-                    userId: userDoc.$id,
-                    batStatus: true,
-                    assignedAt: new Date(),
-                  })
-                ).unwrap();
 
-                await databases.updateDocument(dbId, usersCollId, userDoc.$id, {
-                  batteryId: battery.$id,
-                });
-              }
+              assignedBatteryId = newBattery.$id;
+
+              // Update user with batteryId
+              await databases.updateDocument(dbId, usersCollId, userDoc.$id, {
+                batteryId: newBattery.$id,
+              });
             }
 
             successCount++;
           } catch (err) {
             console.error(`Row ${i + 2} failed:`, row, err);
             errorCount++;
+            toast.error(`Row ${i + 2} failed`);
           }
         }
 
         toast.success(
-          `Import completed! Success: ${successCount} ${
-            errorCount > 0 ? `| Failed: ${errorCount}` : ""
-          }`
+          `Import completed! 
+          Success: ${successCount} users 
+          ${errorCount > 0 ? `| Failed: ${errorCount}` : ""}`
         );
       } catch (err) {
         toast.error("Failed to process file");
+        console.error(err);
       } finally {
         setIsProcessing(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
