@@ -89,6 +89,57 @@ const Payments = () => {
     }
   };
 
+  // Calculate the start of the current payment cycle based on company salary day
+  const getPaymentCycleStart = (salaryDayOfWeek) => {
+    // salaryDayOfWeek: 0 (Sun) - 6 (Sat)
+    if (salaryDayOfWeek === undefined || salaryDayOfWeek === null) {
+      // Fallback to today if no salary day set
+      const { start } = getTodayISTRange();
+      return start;
+    }
+
+    const now = new Date();
+
+
+    // Get current IST time
+    const istNow = new Date(
+      now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
+
+    const currentDay = istNow.getDay(); // 0-6
+    let diff = currentDay - salaryDayOfWeek;
+
+    // If today is Monday (1) and Salary Day is Tuesday (2) -> diff is -1.
+    // We want the PREVIOUS Tuesday, so we subtract 6 more days? 
+    // Wait, if today is Mon, last Tue was 6 days ago.
+    // Logic: if diff < 0, it means we entered a new week relative to Sunday start, 
+    // but haven't passed the Salary Day yet?
+    // Actually simpler: 
+    // We want the most recent date matching `salaryDayOfWeek`.
+    // If today == salaryDay, diff=0 -> Today.
+    // If today > salaryDay, diff>0 -> Recent past.
+    // If today < salaryDay, diff<0 -> Previous week.
+
+    if (diff < 0) {
+      diff += 7;
+    }
+
+    const startDate = new Date(istNow);
+    startDate.setDate(istNow.getDate() - diff);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Convert back to UTC for Appwrite query
+    // We need to be careful with timezone conversion. 
+    // easiest is to construct the string "YYYY-MM-DD" and append time info
+    const year = startDate.getFullYear();
+    const month = String(startDate.getMonth() + 1).padStart(2, '0');
+    const day = String(startDate.getDate()).padStart(2, '0');
+
+    // Construct IST string
+    const cycleStartISO = `${year}-${month}-${day}T00:00:00+05:30`;
+    return new Date(cycleStartISO).toISOString();
+  };
+
   const fetchWeeklyRent = async () => {
     setLoading(true);
     try {
@@ -100,9 +151,16 @@ const Payments = () => {
         return;
       }
 
-      const { start: todayStart, end: todayEnd } = getTodayISTRange();
+      // Determine the start of the cycle (Most recent Salary Day)
+      const cycleStart = getPaymentCycleStart(company.salaryDay);
+      // For end date, we can just use "now" or extremely far future, 
+      // but practically we just want anything >= cycleStart.
+      // We'll use a far future date to be safe or just omit the upper bound if Appwrite allows, 
+      // but the previous code had an upper bound. Let's strictly bind to "End of Week" or just "Now + 7 days"?
+      // Actually strictly speaking, we just want "After cycle start".
+      // But query requires range usually or just GreaterThan.
 
-      console.log("Querying for today IST:", todayStart, "to", todayEnd);
+      console.log("Querying for cycle starting:", cycleStart);
 
       // Get ALL active users with bikes
       const usersRes = await databases.listDocuments(dbId, usersCollId, [
@@ -121,7 +179,8 @@ const Payments = () => {
 
       const userIds = usersRes.documents.map((u) => u.$id);
 
-      // Get rent status for today using UTC timestamps
+      // Get rent status for current cycle using UTC timestamps
+      // We removed the upper bound check (lessThanEqual) because we want ANY payment since the salary day.
       const [collectedRentRes, pendingRentRes] = await Promise.all([
         databases.listDocuments(dbId, paymentRecordsCollId, [
           Query.equal("userId", userIds),
@@ -130,22 +189,20 @@ const Payments = () => {
             Query.equal("method", "cash"),
             Query.equal("method", "online"),
           ]),
-          Query.greaterThanEqual("date", todayStart),
-          Query.lessThanEqual("date", todayEnd),
+          Query.greaterThanEqual("date", cycleStart),
           Query.limit(500),
         ]),
         databases.listDocuments(dbId, paymentRecordsCollId, [
           Query.equal("userId", userIds),
           Query.equal("type", "rent"),
           Query.equal("method", "pending"),
-          Query.greaterThanEqual("date", todayStart),
-          Query.lessThanEqual("date", todayEnd),
+          Query.greaterThanEqual("date", cycleStart),
           Query.limit(500),
         ]),
       ]);
 
-      console.log("Collected rent today:", collectedRentRes.documents.length);
-      console.log("Pending rent today:", pendingRentRes.documents.length);
+      console.log("Collected rent this cycle:", collectedRentRes.documents.length);
+      console.log("Pending rent this cycle:", pendingRentRes.documents.length);
 
       const collectedRentSet = new Set(
         collectedRentRes.documents.map((d) => d.userId)
@@ -155,6 +212,8 @@ const Payments = () => {
       );
 
       // Create missing pending records
+      // If we are IN the cycle (e.g. it's salary day OR after), and no payment exists, create pending?
+      // Yes, if it's the cycle, we expect payment.
       const usersNeedingPending = usersRes.documents.filter(
         (u) => !collectedRentSet.has(u.$id) && !pendingRentMap.has(u.$id)
       );
@@ -290,10 +349,10 @@ const Payments = () => {
           prev.map((p) =>
             p.userId === currentPayment.userId
               ? {
-                  ...p,
-                  rentCollected: true,
-                  totalToCollect: p.pendingAmount,
-                }
+                ...p,
+                rentCollected: true,
+                totalToCollect: p.pendingAmount,
+              }
               : p
           )
         );
@@ -335,11 +394,11 @@ const Payments = () => {
           prev.map((p) =>
             p.userId === currentPayment.userId
               ? {
-                  ...p,
-                  pendingAmount: 0,
-                  pendingCollected: true,
-                  totalToCollect: p.rentCollected ? 0 : p.weeklyRent,
-                }
+                ...p,
+                pendingAmount: 0,
+                pendingCollected: true,
+                totalToCollect: p.rentCollected ? 0 : p.weeklyRent,
+              }
               : p
           )
         );
@@ -540,35 +599,33 @@ const Payments = () => {
                               p.pendingAmount === 0 ||
                               collecting[`${p.userId}-pending`]
                             }
-                            className={`px-3 py-1 rounded text-sm ${
-                              p.pendingAmount === 0 ||
+                            className={`px-3 py-1 rounded text-sm ${p.pendingAmount === 0 ||
                               collecting[`${p.userId}-pending`]
-                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                : "bg-blue-600 text-white hover:bg-blue-700"
-                            }`}
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                              }`}
                           >
                             {collecting[`${p.userId}-pending`]
                               ? "..."
                               : p.pendingAmount === 0
-                              ? "No Pending"
-                              : "Collect Pending"}
+                                ? "No Pending"
+                                : "Collect Pending"}
                           </button>
                           <button
                             onClick={() => openModal(p, "rent")}
                             disabled={
                               p.rentCollected || collecting[`${p.userId}-rent`]
                             }
-                            className={`px-3 py-1 rounded text-sm ${
-                              p.rentCollected || collecting[`${p.userId}-rent`]
-                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                : "bg-green-600 text-white hover:bg-green-700"
-                            }`}
+                            className={`px-3 py-1 rounded text-sm ${p.rentCollected || collecting[`${p.userId}-rent`]
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-green-600 text-white hover:bg-green-700"
+                              }`}
                           >
                             {collecting[`${p.userId}-rent`]
                               ? "..."
                               : p.rentCollected
-                              ? "✓ Collected"
-                              : "Collect Rent"}
+                                ? "✓ Collected"
+                                : "Collect Rent"}
                           </button>
                         </td>
                       </tr>
@@ -627,35 +684,33 @@ const Payments = () => {
                           p.pendingAmount === 0 ||
                           collecting[`${p.userId}-pending`]
                         }
-                        className={`flex-1 py-2 rounded text-sm ${
-                          p.pendingAmount === 0 ||
+                        className={`flex-1 py-2 rounded text-sm ${p.pendingAmount === 0 ||
                           collecting[`${p.userId}-pending`]
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
                       >
                         {collecting[`${p.userId}-pending`]
                           ? "..."
                           : p.pendingAmount === 0
-                          ? "No Pending"
-                          : "Collect Pending"}
+                            ? "No Pending"
+                            : "Collect Pending"}
                       </button>
                       <button
                         onClick={() => openModal(p, "rent")}
                         disabled={
                           p.rentCollected || collecting[`${p.userId}-rent`]
                         }
-                        className={`flex-1 py-2 rounded text-sm ${
-                          p.rentCollected || collecting[`${p.userId}-rent`]
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "bg-green-600 text-white hover:bg-green-700"
-                        }`}
+                        className={`flex-1 py-2 rounded text-sm ${p.rentCollected || collecting[`${p.userId}-rent`]
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-green-600 text-white hover:bg-green-700"
+                          }`}
                       >
                         {collecting[`${p.userId}-rent`]
                           ? "..."
                           : p.rentCollected
-                          ? "✓ Collected"
-                          : "Collect Rent"}
+                            ? "✓ Collected"
+                            : "Collect Rent"}
                       </button>
                     </div>
                   </div>
@@ -723,7 +778,7 @@ const Payments = () => {
                 onClick={confirmCollect}
                 disabled={
                   collecting[
-                    `${currentPayment.userId}-${currentPayment.collectType}`
+                  `${currentPayment.userId}-${currentPayment.collectType}`
                   ]
                 }
                 className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
