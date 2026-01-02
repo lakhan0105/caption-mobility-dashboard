@@ -148,7 +148,10 @@ export const getUserBySearch = createAsyncThunk(
     const limit = 20;
     try {
       const resp = await databases.listDocuments(dbId, usersCollId, [
-        Query.contains("userName", inputText),
+        Query.or([
+          Query.contains("userName", inputText),
+          Query.contains("userPhone", inputText),
+        ]),
         Query.limit(limit),
         Query.offset(offset),
       ]);
