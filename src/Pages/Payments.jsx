@@ -25,6 +25,7 @@ const Payments = () => {
   const [currentPayment, setCurrentPayment] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [utrInput, setUtrInput] = useState("");
+  const [amountToCollect, setAmountToCollect] = useState(0);
 
   // Plan types and their rent amounts
   const PLAN_RATES = {
@@ -314,6 +315,7 @@ const Payments = () => {
     }
 
     setCurrentPayment({ ...payment, collectType: type, amount });
+    setAmountToCollect(amount);
     setShowPaymentModal(true);
   };
 
@@ -329,9 +331,14 @@ const Payments = () => {
     }));
 
     try {
+      const collectedAmount = Number(amountToCollect);
+
       if (currentPayment.collectType === "rent") {
-        // Update rent payment record with UTC timestamp
+        const shortfall = currentPayment.weeklyRent - collectedAmount;
+
+        // Update rent payment record with collected amount
         const updateData = {
+          amount: collectedAmount,
           method: paymentMethod,
           date: getUTCTimestamp(),
         };
@@ -344,6 +351,20 @@ const Payments = () => {
           updateData
         );
 
+        // If shortfall exists, update user pending amount
+        let newPendingAmount = currentPayment.pendingAmount;
+        if (shortfall > 0) {
+          newPendingAmount += shortfall;
+          await databases.updateDocument(
+            dbId,
+            usersCollId,
+            currentPayment.userId,
+            {
+              pendingAmount: newPendingAmount
+            }
+          );
+        }
+
         // Update UI
         setPayments((prev) =>
           prev.map((p) =>
@@ -351,19 +372,25 @@ const Payments = () => {
               ? {
                 ...p,
                 rentCollected: true,
-                totalToCollect: p.pendingAmount,
+                pendingAmount: newPendingAmount,
+                totalToCollect: newPendingAmount,
               }
               : p
           )
         );
         setTotalAmount((prev) => ({
-          rent: prev.rent - currentPayment.weeklyRent,
-          pending: prev.pending,
-          total: prev.total - currentPayment.weeklyRent,
+          rent: prev.rent - currentPayment.weeklyRent, // Remove from rent due (since it's now "collected" or moved to pending)
+          pending: prev.pending + shortfall, // Add shortfall to global pending
+          total: prev.total - collectedAmount, // Total reduces by what we actually got
         }));
 
-        toast.success(`✅ Rent ₹${currentPayment.weeklyRent} collected!`);
+        toast.success(`✅ Rent ₹${collectedAmount} collected!${shortfall > 0 ? ` ₹${shortfall} added to pending.` : ''}`);
       } else if (currentPayment.collectType === "pending") {
+        if (collectedAmount > currentPayment.pendingAmount) {
+          toast.error("Cannot collect more than pending amount");
+          return;
+        }
+
         // Create pending clearance record with UTC timestamp
         await databases.createDocument(
           dbId,
@@ -371,7 +398,7 @@ const Payments = () => {
           ID.unique(),
           {
             userId: currentPayment.userId,
-            amount: currentPayment.pendingAmount,
+            amount: collectedAmount,
             type: "pending_clearance",
             method: paymentMethod,
             utrNumber: paymentMethod === "online" ? utrInput.trim() : null,
@@ -379,13 +406,15 @@ const Payments = () => {
           }
         );
 
-        // Clear pending amount in user record
+        // Update user record with new pending amount
+        const newPendingAmount = currentPayment.pendingAmount - collectedAmount;
+
         await databases.updateDocument(
           dbId,
           usersCollId,
           currentPayment.userId,
           {
-            pendingAmount: 0,
+            pendingAmount: newPendingAmount,
           }
         );
 
@@ -395,20 +424,20 @@ const Payments = () => {
             p.userId === currentPayment.userId
               ? {
                 ...p,
-                pendingAmount: 0,
-                pendingCollected: true,
-                totalToCollect: p.rentCollected ? 0 : p.weeklyRent,
+                pendingAmount: newPendingAmount,
+                pendingCollected: newPendingAmount === 0, // Only fully collected if 0
+                totalToCollect: (p.rentCollected ? 0 : p.weeklyRent) + newPendingAmount,
               }
               : p
           )
         );
         setTotalAmount((prev) => ({
           rent: prev.rent,
-          pending: prev.pending - currentPayment.pendingAmount,
-          total: prev.total - currentPayment.pendingAmount,
+          pending: prev.pending - collectedAmount,
+          total: prev.total - collectedAmount,
         }));
 
-        toast.success(`✅ Pending ₹${currentPayment.pendingAmount} cleared!`);
+        toast.success(`✅ Pending ₹${collectedAmount} collected!`);
       }
     } catch (e) {
       console.error(e);
@@ -740,9 +769,21 @@ const Payments = () => {
                 /week)
               </p>
             )}
-            <p className="text-3xl font-bold text-green-600 mb-4">
-              ₹{currentPayment.amount.toLocaleString("en-IN")}
-            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Amount to Collect
+              </label>
+              <input
+                type="number"
+                value={amountToCollect}
+                onChange={(e) => setAmountToCollect(Number(e.target.value))}
+                max={currentPayment.amount}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 text-lg font-bold text-green-700"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Total Due: ₹{currentPayment.amount.toLocaleString("en-IN")}
+              </p>
+            </div>
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">

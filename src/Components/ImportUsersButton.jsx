@@ -184,7 +184,7 @@ function ImportUsersButton() {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isProcessing}
-        className="fixed bottom-20 right-5 z-40 flex items-center gap-2 rounded-full bg-green-600 px-5 py-3 text-white shadow-2xl hover:bg-green-700 active:scale-95 transition-all md:hidden"
+        className="fixed bottom-36 right-5 z-40 flex items-center gap-2 rounded-full bg-green-600 px-5 py-3 text-white shadow-2xl hover:bg-green-700 active:scale-95 transition-all md:hidden"
       >
         <FaFileExcel className="text-xl" />
         <span className="text-sm font-medium">
