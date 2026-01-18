@@ -178,7 +178,96 @@ const Payments = () => {
         return;
       }
 
-      const userIds = usersRes.documents.map((u) => u.$id);
+      // Rent Cycle Check Logic
+      const updatesPromises = usersRes.documents.map(async (user) => {
+        try {
+          // If no lastRentCheckDate, we assume it's a new user or first time running this feat
+          // We set it to cycleStart so we don't double count retrospectively, 
+          // OR we could just skip. Let's start tracking from NOW/CycleStart for everyone if missing.
+          let lastCheckDate = user.lastRentCheckDate;
+
+          if (!lastCheckDate) {
+            // Initialize for existing users to avoid massive back-charges
+            // We can silently update it to current cycleStart if missing
+            // So next week it will work.
+            // However, user wants "if rent not collected on CURRENT cycle... add to pending"
+            // This implies we need to check the *previous* cycle? 
+            // Actually, if we are in a NEW cycle, and the user hasn't paid for the OLD cycle,
+            // that old rent should be in pending.
+
+            // Logic:
+            // 1. We are in Cycle B (started This Tuesday).
+            // 2. User has lastRentCheckDate in Cycle A (Last Tuesday).
+            // 3. If User has NOT paid for Cycle A...
+            // 4. Add Cycle A rent to pending.
+            // 5. Update lastRentCheckDate to Cycle B start.
+
+            // If lastRentCheckDate is missing, we can't reliably know the history.
+            // Safest is to set it to current cycleStart, effectively "starting fresh" for automation.
+            return null;
+          }
+
+          const lastCheckInfo = new Date(lastCheckDate);
+          const currentCycleStartObj = new Date(cycleStart);
+
+          // If last check was BEFORE the current cycle start, we need to verify that period.
+          if (lastCheckInfo < currentCycleStartObj) {
+            console.log(`Checking past cycle for ${user.userName} (${user.$id})`);
+
+            // Check for ANY rent payment between lastCheckDate and cycleStart
+            // limiting to range [lastCheckDate, cycleStart]
+            const paymentsInPastCycle = await databases.listDocuments(dbId, paymentRecordsCollId, [
+              Query.equal("userId", user.$id),
+              Query.equal("type", "rent"),
+              Query.greaterThanEqual("date", lastCheckDate),
+              Query.lessThan("date", cycleStart),
+              Query.limit(1)
+            ]);
+
+            const hasPaid = paymentsInPastCycle.documents.length > 0;
+            const updates = { lastRentCheckDate: cycleStart }; // Always bump the check date
+
+            if (!hasPaid) {
+              // Missed payment! Add to pending.
+              const oldPlanType = user.planType || "BS"; // Assumption: plan didn't change
+              const missedRent = getRentAmount(oldPlanType);
+              const currentPending = user.pendingAmount || 0;
+              const newPending = currentPending + missedRent;
+
+              updates.pendingAmount = newPending;
+
+              // Also create a "Missed Rent" record for auditing? 
+              // Or just updating pending is enough as per request.
+              // We'll just update pending.
+
+              console.log(`User ${user.userName} missed rent. Adding ${missedRent} to pending.`);
+              toast(`⏳ Added missed rent to pending for ${user.userName}`, { icon: 'ℹ️' });
+            }
+
+            // Apply updates
+            await databases.updateDocument(dbId, usersCollId, user.$id, updates);
+
+            // Return updated user object to keep UI in sync
+            return { ...user, ...updates };
+          }
+
+        } catch (err) {
+          console.error(`Error processing cycle for ${user.$id}`, err);
+        }
+        return null;
+      });
+
+      // Wait for all cycle checks to complete
+      const processedUsersResults = await Promise.all(updatesPromises);
+
+      // Update our local user list with any changes
+      const updatedUsersList = usersRes.documents.map((u, index) => {
+        const processed = processedUsersResults[index];
+        return processed ? { ...u, ...processed } : u;
+      });
+
+
+      const userIds = updatedUsersList.map((u) => u.$id);
 
       // Get rent status for current cycle using UTC timestamps
       // We removed the upper bound check (lessThanEqual) because we want ANY payment since the salary day.
@@ -215,7 +304,7 @@ const Payments = () => {
       // Create missing pending records
       // If we are IN the cycle (e.g. it's salary day OR after), and no payment exists, create pending?
       // Yes, if it's the cycle, we expect payment.
-      const usersNeedingPending = usersRes.documents.filter(
+      const usersNeedingPending = updatedUsersList.filter(
         (u) => !collectedRentSet.has(u.$id) && !pendingRentMap.has(u.$id)
       );
 
@@ -250,8 +339,18 @@ const Payments = () => {
         await Promise.allSettled(createPromises);
       }
 
+      // If we found any user without lastRentCheckDate, initialize it now
+      const initCheckDatePromises = updatedUsersList
+        .filter(u => !u.lastRentCheckDate)
+        .map(u => databases.updateDocument(dbId, usersCollId, u.$id, { lastRentCheckDate: cycleStart }));
+
+      if (initCheckDatePromises.length > 0) {
+        // Fire and forget initialization
+        Promise.allSettled(initCheckDatePromises);
+      }
+
       // Build final payment list - SHOW ALL ACTIVE USERS
-      const finalList = usersRes.documents.map((user) => {
+      const finalList = updatedUsersList.map((user) => {
         const pendingAmt = parseInt(user.pendingAmount || 0);
         const rentCollected = collectedRentSet.has(user.$id);
         const planType = user.planType || "BS"; // Default to BS if empty
@@ -272,6 +371,8 @@ const Payments = () => {
           pendingAmount: pendingAmt,
           totalToCollect,
           rentCollected,
+          lastCallStatus: user.lastCallStatus, // Added
+          lastCallDate: user.lastCallDate, // Added
         };
       });
 
@@ -353,17 +454,24 @@ const Payments = () => {
 
         // If shortfall exists, update user pending amount
         let newPendingAmount = currentPayment.pendingAmount;
+        const cycleStart = getPaymentCycleStart(companies.find(c => c.$id === selectedCompany)?.salaryDay);
+
+        // We ALWAYS update lastRentCheckDate when rent is collected to mark cycle as "Accounted For"
+        const updateBody = {
+          lastRentCheckDate: cycleStart
+        };
+
         if (shortfall > 0) {
           newPendingAmount += shortfall;
-          await databases.updateDocument(
-            dbId,
-            usersCollId,
-            currentPayment.userId,
-            {
-              pendingAmount: newPendingAmount
-            }
-          );
+          updateBody.pendingAmount = newPendingAmount;
         }
+
+        await databases.updateDocument(
+          dbId,
+          usersCollId,
+          currentPayment.userId,
+          updateBody
+        );
 
         // Update UI
         setPayments((prev) =>
@@ -450,6 +558,28 @@ const Payments = () => {
       setShowPaymentModal(false);
       setUtrInput("");
       setPaymentMethod("cash");
+    }
+  };
+
+  const updateCallStatus = async (userId, status) => {
+    // Optimistic Update
+    setPayments((prev) =>
+      prev.map((p) =>
+        p.userId === userId ? { ...p, lastCallStatus: status } : p
+      )
+    );
+
+    try {
+      await databases.updateDocument(dbId, usersCollId, userId, {
+        lastCallStatus: status,
+        lastCallDate: getUTCTimestamp(),
+      });
+      toast.success(status === "picked" ? "Marked as Picked" : "Marked as Not Picked");
+    } catch (error) {
+      console.error("Failed to update call status:", error);
+      toast.error("Failed to update status");
+      // Revert on failure
+      refreshData();
     }
   };
 
@@ -581,6 +711,9 @@ const Payments = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Total Due
                       </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                        Call Status
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Actions
                       </th>
@@ -620,6 +753,43 @@ const Payments = () => {
                         </td>
                         <td className="px-6 py-4 text-sm font-bold text-gray-900">
                           ₹{p.totalToCollect.toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <div className="flex justify-center gap-2 items-center">
+                            <a
+                              href={`tel:${p.userPhone}`}
+                              className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                              title="Call User"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                              </svg>
+                            </a>
+                            <button
+                              onClick={() => updateCallStatus(p.userId, "picked")}
+                              className={`p-1.5 rounded-full duration-200 transition-colors ${p.lastCallStatus === "picked"
+                                ? "bg-green-600 text-white shadow-sm ring-2 ring-green-200"
+                                : "bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600"
+                                }`}
+                              title="Picked"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => updateCallStatus(p.userId, "not_picked")}
+                              className={`p-1.5 rounded-full duration-200 transition-colors ${p.lastCallStatus === "not_picked"
+                                ? "bg-red-600 text-white shadow-sm ring-2 ring-red-200"
+                                : "bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600"
+                                }`}
+                              title="Not Picked"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm flex gap-2">
                           <button
@@ -678,9 +848,32 @@ const Payments = () => {
                         <p className="text-sm text-gray-600">{p.userPhone}</p>
                         <div className="mt-1">{getPlanBadge(p.planType)}</div>
                       </div>
-                      <p className="text-xl font-bold text-gray-900">
-                        ₹{p.totalToCollect.toLocaleString("en-IN")}
-                      </p>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-gray-900">
+                          ₹{p.totalToCollect.toLocaleString("en-IN")}
+                        </p>
+                        {p.lastCallStatus && (
+                          <div className="mt-1 flex justify-end">
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${p.lastCallStatus === "picked"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                                }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${p.lastCallStatus === "picked" ? "bg-green-600" : "bg-red-600"
+                                }`}></span>
+                              {p.lastCallStatus === "picked" ? "Picked" : "Not Picked"}
+                            </span>
+                          </div>
+                        )}
+                        {p.lastCallDate && (
+                          <div className="text-[10px] text-gray-400 text-right mt-0.5">
+                            {new Date(p.lastCallDate).toLocaleString('en-IN', {
+                              day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="text-sm mb-3 space-y-1">
                       <div className="flex justify-between">
@@ -706,6 +899,47 @@ const Payments = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Call Status Actions (Mobile) */}
+                    <div className="flex justify-between items-center bg-gray-50 p-2 rounded mb-3">
+                      <span className="text-xs text-gray-500 font-medium">Call Status:</span>
+                      <div className="flex gap-2 items-center">
+                        <a
+                          href={`tel:${p.userPhone}`}
+                          className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                          title="Call User"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                          </svg>
+                        </a>
+                        <button
+                          onClick={() => updateCallStatus(p.userId, "picked")}
+                          className={`p-1.5 rounded-full ${p.lastCallStatus === "picked"
+                            ? "bg-green-600 text-white shadow-sm"
+                            : "bg-white text-gray-400 border border-gray-200 hover:border-green-500 hover:text-green-500"
+                            }`}
+                          title="Picked"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => updateCallStatus(p.userId, "not_picked")}
+                          className={`p-1.5 rounded-full ${p.lastCallStatus === "not_picked"
+                            ? "bg-red-600 text-white shadow-sm"
+                            : "bg-white text-gray-400 border border-gray-200 hover:border-red-500 hover:text-red-500"
+                            }`}
+                          title="Not Picked"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => openModal(p, "pending")}
@@ -798,47 +1032,35 @@ const Payments = () => {
                 <option value="online">Online</option>
               </select>
             </div>
-
             {paymentMethod === "online" && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  UTR Number <span className="text-red-500">*</span>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  UTR Number
                 </label>
                 <input
                   type="text"
                   value={utrInput}
                   onChange={(e) => setUtrInput(e.target.value)}
-                  placeholder="Enter UTR number"
+                  placeholder="Enter UTR / Ref Number"
                   className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
-
-            <div className="flex gap-2">
+            <div className="flex justify-end gap-3">
               <button
-                onClick={confirmCollect}
-                disabled={
-                  collecting[
-                  `${currentPayment.userId}-${currentPayment.collectType}`
-                  ]
-                }
-                className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {collecting[
-                  `${currentPayment.userId}-${currentPayment.collectType}`
-                ]
-                  ? "Processing..."
-                  : "Confirm Collection"}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setUtrInput("");
-                  setPaymentMethod("cash");
-                }}
-                className="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400"
+                onClick={() => setShowPaymentModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
               >
                 Cancel
+              </button>
+              <button
+                onClick={confirmCollect}
+                disabled={collecting[`${currentPayment.userId}-${currentPayment.collectType}`]}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {collecting[`${currentPayment.userId}-${currentPayment.collectType}`]
+                  ? "Processing..."
+                  : "Confirm Collect"}
               </button>
             </div>
           </div>
@@ -849,3 +1071,4 @@ const Payments = () => {
 };
 
 export default Payments;
+
