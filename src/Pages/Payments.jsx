@@ -606,7 +606,7 @@ const Payments = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 bg-white">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 bg-white pb-24">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Weekly Rent Collection</h1>
@@ -720,115 +720,116 @@ const Payments = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {payments.map((p) => (
-                      <tr key={p.userId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {p.userName}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {p.userPhone}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {getPlanBadge(p.planType)}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {p.pendingAmount === 0 ? (
-                            <span className="text-gray-400">₹0</span>
-                          ) : (
-                            <span className="font-medium">
-                              ₹{p.pendingAmount.toLocaleString("en-IN")}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {p.rentCollected ? (
-                            <span className="text-green-600 text-xs font-medium">
-                              ✓ Collected
-                            </span>
-                          ) : (
-                            <span className="text-red-600 font-medium">
-                              ₹{p.weeklyRent.toLocaleString("en-IN")}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                          ₹{p.totalToCollect.toLocaleString("en-IN")}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <div className="flex justify-center gap-2 items-center">
-                            <a
-                              href={`tel:${p.userPhone}`}
-                              className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
-                              title="Call User"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                              </svg>
-                            </a>
+                    {payments
+                      .map((p) => (
+                        <tr key={p.userId} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                            {p.userName}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {p.userPhone}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            {getPlanBadge(p.planType)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {p.pendingAmount === 0 ? (
+                              <span className="text-gray-400">₹0</span>
+                            ) : (
+                              <span className="font-medium">
+                                ₹{p.pendingAmount.toLocaleString("en-IN")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            {p.rentCollected ? (
+                              <span className="text-green-600 text-xs font-medium">
+                                ✓ Collected
+                              </span>
+                            ) : (
+                              <span className="text-red-600 font-medium">
+                                ₹{p.weeklyRent.toLocaleString("en-IN")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                            ₹{p.totalToCollect.toLocaleString("en-IN")}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <div className="flex justify-center gap-2 items-center">
+                              <a
+                                href={`tel:${p.userPhone}`}
+                                className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                                title="Call User"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                                </svg>
+                              </a>
+                              <button
+                                onClick={() => updateCallStatus(p.userId, "picked")}
+                                className={`p-1.5 rounded-full duration-200 transition-colors ${p.lastCallStatus === "picked"
+                                  ? "bg-green-600 text-white shadow-sm ring-2 ring-green-200"
+                                  : "bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600"
+                                  }`}
+                                title="Picked"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => updateCallStatus(p.userId, "not_picked")}
+                                className={`p-1.5 rounded-full duration-200 transition-colors ${p.lastCallStatus === "not_picked"
+                                  ? "bg-red-600 text-white shadow-sm ring-2 ring-red-200"
+                                  : "bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600"
+                                  }`}
+                                title="Not Picked"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm flex gap-2">
                             <button
-                              onClick={() => updateCallStatus(p.userId, "picked")}
-                              className={`p-1.5 rounded-full duration-200 transition-colors ${p.lastCallStatus === "picked"
-                                ? "bg-green-600 text-white shadow-sm ring-2 ring-green-200"
-                                : "bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600"
+                              onClick={() => openModal(p, "pending")}
+                              disabled={
+                                p.pendingAmount === 0 ||
+                                collecting[`${p.userId}-pending`]
+                              }
+                              className={`px-3 py-1 rounded text-sm ${p.pendingAmount === 0 ||
+                                collecting[`${p.userId}-pending`]
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                : "bg-blue-600 text-white hover:bg-blue-700"
                                 }`}
-                              title="Picked"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
+                              {collecting[`${p.userId}-pending`]
+                                ? "..."
+                                : p.pendingAmount === 0
+                                  ? "No Pending"
+                                  : "Collect Pending"}
                             </button>
                             <button
-                              onClick={() => updateCallStatus(p.userId, "not_picked")}
-                              className={`p-1.5 rounded-full duration-200 transition-colors ${p.lastCallStatus === "not_picked"
-                                ? "bg-red-600 text-white shadow-sm ring-2 ring-red-200"
-                                : "bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600"
+                              onClick={() => openModal(p, "rent")}
+                              disabled={
+                                p.rentCollected || collecting[`${p.userId}-rent`]
+                              }
+                              className={`px-3 py-1 rounded text-sm ${p.rentCollected || collecting[`${p.userId}-rent`]
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                : "bg-green-600 text-white hover:bg-green-700"
                                 }`}
-                              title="Not Picked"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
+                              {collecting[`${p.userId}-rent`]
+                                ? "..."
+                                : p.rentCollected
+                                  ? "✓ Collected"
+                                  : "Collect Rent"}
                             </button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm flex gap-2">
-                          <button
-                            onClick={() => openModal(p, "pending")}
-                            disabled={
-                              p.pendingAmount === 0 ||
-                              collecting[`${p.userId}-pending`]
-                            }
-                            className={`px-3 py-1 rounded text-sm ${p.pendingAmount === 0 ||
-                              collecting[`${p.userId}-pending`]
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : "bg-blue-600 text-white hover:bg-blue-700"
-                              }`}
-                          >
-                            {collecting[`${p.userId}-pending`]
-                              ? "..."
-                              : p.pendingAmount === 0
-                                ? "No Pending"
-                                : "Collect Pending"}
-                          </button>
-                          <button
-                            onClick={() => openModal(p, "rent")}
-                            disabled={
-                              p.rentCollected || collecting[`${p.userId}-rent`]
-                            }
-                            className={`px-3 py-1 rounded text-sm ${p.rentCollected || collecting[`${p.userId}-rent`]
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : "bg-green-600 text-white hover:bg-green-700"
-                              }`}
-                          >
-                            {collecting[`${p.userId}-rent`]
-                              ? "..."
-                              : p.rentCollected
-                                ? "✓ Collected"
-                                : "Collect Rent"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -915,27 +916,21 @@ const Payments = () => {
                         </a>
                         <button
                           onClick={() => updateCallStatus(p.userId, "picked")}
-                          className={`p-1.5 rounded-full ${p.lastCallStatus === "picked"
-                            ? "bg-green-600 text-white shadow-sm"
-                            : "bg-white text-gray-400 border border-gray-200 hover:border-green-500 hover:text-green-500"
+                          className={`flex-1 px-1 py-1.5 rounded-full text-[10px] font-medium uppercase tracking-wide transition-all ${p.lastCallStatus === "picked"
+                            ? "bg-green-600 text-white shadow-md ring-1 ring-green-200"
+                            : "bg-white border border-gray-300 text-gray-700 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
                             }`}
-                          title="Picked"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
+                          Picked
                         </button>
                         <button
                           onClick={() => updateCallStatus(p.userId, "not_picked")}
-                          className={`p-1.5 rounded-full ${p.lastCallStatus === "not_picked"
-                            ? "bg-red-600 text-white shadow-sm"
-                            : "bg-white text-gray-400 border border-gray-200 hover:border-red-500 hover:text-red-500"
+                          className={`flex-1 px-1 py-1.5 rounded-full text-[10px] font-medium uppercase tracking-wide transition-all ${p.lastCallStatus === "not_picked"
+                            ? "bg-red-600 text-white shadow-md ring-1 ring-red-200"
+                            : "bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
                             }`}
-                          title="Not Picked"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
+                          Rejected
                         </button>
                       </div>
                     </div>

@@ -20,6 +20,7 @@ import {
   Swaps,
   UserDetails,
   Users,
+  CallLogs,
 } from "./Pages/index.js";
 import PublicRoute from "./PublicRoute.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
@@ -50,6 +51,7 @@ const router = createBrowserRouter(
             <Route path="dashboard/batteries" element={<Batteries />} />
             <Route path="dashboard/swaps" element={<Swaps />} />
             <Route path="dashboard/payments" element={<Payments />} />
+            <Route path="dashboard/call-logs" element={<CallLogs />} />
           </Route>
         </Route>
       </Route>

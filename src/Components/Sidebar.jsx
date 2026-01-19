@@ -30,6 +30,9 @@ function Sidebar() {
         <li>
           <NavLink to={"dashboard/payments"}>payments</NavLink>
         </li>
+        <li>
+          <NavLink to={"dashboard/call-logs"}>Call Logs</NavLink>
+        </li>
       </ul>
     </aside>
   );
