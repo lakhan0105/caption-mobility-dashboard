@@ -6,4 +6,6 @@ import Swaps from "./Swaps";
 import UserDetails from "./UserDetails";
 import Users from "./Users";
 
-export { StartPage, AuthPage, Users, Bikes, UserDetails, Batteries, Swaps };
+import CallLogs from "./CallLogs";
+
+export { StartPage, AuthPage, Users, Bikes, UserDetails, Batteries, Swaps, CallLogs };

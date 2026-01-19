@@ -49,6 +49,27 @@ function SmallSidebar({ handleToggleSmallSidebar, smallSidebarState }) {
             Batteries
           </NavLink>
         </li>
+        <li>
+          <NavLink to={"dashboard/swaps"} onClick={handleToggleSmallSidebar}>
+            Swaps
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
+            to={"dashboard/payments"}
+            onClick={handleToggleSmallSidebar}
+          >
+            Payments
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
+            to={"dashboard/call-logs"}
+            onClick={handleToggleSmallSidebar}
+          >
+            Call Logs
+          </NavLink>
+        </li>
       </ul>
     </aside>
   );

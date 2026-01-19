@@ -5,6 +5,7 @@ import { MdOutlinePedalBike } from "react-icons/md";
 import { PiBatteryPlusBold } from "react-icons/pi";
 import { PiSwapBold } from "react-icons/pi";
 import { FaWallet } from "react-icons/fa6";
+import { FaPhone } from "react-icons/fa";
 
 const links = [
   {
@@ -12,6 +13,12 @@ const links = [
     label: "users",
     path: "dashboard/users",
     icon: <FaUsers />,
+  },
+  {
+    id: 5,
+    label: "calls",
+    path: "dashboard/call-logs",
+    icon: <FaPhone />,
   },
   {
     id: 1,
@@ -42,24 +49,22 @@ const links = [
 function SmallNavbar() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-gradient-to-r bg-gray-300 border
-  h-[50px] px-5 shadow-sm z-50"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t h-[55px] px-1 shadow-sm z-50"
     >
-      <ul className="flex items-center justify-between gap-8 h-full capitalize">
+      <ul className="flex items-center justify-between w-full h-full capitalize">
         {links.map((link) => {
           const { id, path, label, icon } = link;
 
           return (
-            <NavLink to={path} key={id}>
+            <NavLink to={path} key={id} className="flex-1 w-full flex justify-center">
               {({ isActive }) => {
                 return (
                   <li
-                    className={`flex flex-col items-center ${
-                      isActive ? "text-indigo-700" : "text-zinc-700"
-                    }`}
+                    className={`flex flex-col items-center ${isActive ? "text-indigo-700" : "text-zinc-700"
+                      }`}
                   >
-                    <span className="text-lg">{icon}</span>
-                    <p className="text-xs">{label}</p>
+                    <span className="text-xl">{icon}</span>
+                    <p className="text-[10px] sm:text-xs">{label}</p>
                   </li>
                 );
               }}
