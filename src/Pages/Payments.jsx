@@ -19,6 +19,7 @@ const Payments = () => {
     total: 0,
   });
   const [collecting, setCollecting] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Modal
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -605,6 +606,15 @@ const Payments = () => {
     );
   };
 
+  // Filter payments based on search query
+  const filteredPayments = payments.filter((payment) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    const name = payment.userName?.toLowerCase() || "";
+    const phone = payment.userPhone?.toLowerCase() || "";
+    return name.includes(query) || phone.includes(query);
+  });
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 bg-white pb-24">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -622,7 +632,7 @@ const Payments = () => {
         </button>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-4">
         <select
           value={selectedCompany}
           onChange={(e) => setSelectedCompany(e.target.value)}
@@ -637,6 +647,41 @@ const Payments = () => {
             </option>
           ))}
         </select>
+
+        {selectedCompany && (
+          <div className="relative max-w-md">
+            <input
+              type="text"
+              placeholder="Search by name or phone number..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 pl-10 border rounded focus:ring-2 focus:ring-blue-500"
+            />
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {selectedCompany && (
@@ -720,7 +765,7 @@ const Payments = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {payments
+                    {filteredPayments
                       .map((p) => (
                         <tr key={p.userId} className="hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm font-medium text-gray-900">
@@ -836,7 +881,7 @@ const Payments = () => {
 
               {/* Mobile Cards */}
               <div className="lg:hidden space-y-4">
-                {payments.map((p) => (
+                {filteredPayments.map((p) => (
                   <div
                     key={p.userId}
                     className="bg-white shadow rounded-lg p-4 border border-gray-200"
