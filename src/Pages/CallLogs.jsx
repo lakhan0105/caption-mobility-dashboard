@@ -13,6 +13,8 @@ const CallLogs = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [filter, setFilter] = useState("not_picked"); // "all", "picked", "not_picked"
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchType, setSearchType] = useState("phone"); // "phone" or "name"
 
     useEffect(() => {
         fetchCompanies();
@@ -86,11 +88,24 @@ const CallLogs = () => {
     const getFilteredAndSortedUsers = () => {
         let filtered = [...users];
 
-        // Filter
+        // Filter by call status
         if (filter === "picked") {
             filtered = filtered.filter((u) => u.lastCallStatus === "picked");
         } else if (filter === "not_picked") {
             filtered = filtered.filter((u) => u.lastCallStatus === "not_picked");
+        }
+
+        // Filter by search query
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase().trim();
+            filtered = filtered.filter((u) => {
+                if (searchType === "phone") {
+                    return u.userPhone?.toLowerCase().includes(query);
+                } else if (searchType === "name") {
+                    return u.userName?.toLowerCase().includes(query);
+                }
+                return true;
+            });
         }
 
         // Sort by recent actions (recently called first)
@@ -138,6 +153,45 @@ const CallLogs = () => {
 
             {selectedCompany && (
                 <>
+                    {/* Search Bar */}
+                    <div className="mb-6">
+                        <div className="flex flex-col sm:flex-row gap-2 max-w-2xl">
+                            <select
+                                value={searchType}
+                                onChange={(e) => setSearchType(e.target.value)}
+                                className="px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 bg-white sm:w-32"
+                            >
+                                <option value="phone">Phone</option>
+                                <option value="name">Name</option>
+                            </select>
+                            <div className="flex-1 relative">
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder={`Search by ${searchType}...`}
+                                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 pr-10"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        title="Clear search"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        {searchQuery && (
+                            <p className="text-sm text-gray-600 mt-2">
+                                Found {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} matching "{searchQuery}"
+                            </p>
+                        )}
+                    </div>
+
                     {/* Filters */}
                     <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
                         <button
